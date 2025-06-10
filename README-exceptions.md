@@ -13,7 +13,6 @@ The specific exception types include:
 
 - `ApiException` - For API communication errors
 - `ContentGenerationException` - For content generation errors
-- `ImageProcessingException` - For image processing errors
 - `PostGenerationException` - For post creation errors
 
 ## Named Constructors
@@ -24,7 +23,6 @@ Each exception class uses named constructors (static factory methods) to create 
 // Example usage:
 throw ApiException::requestFailed('endpoint', 'Error message');
 throw ContentGenerationException::missingContent();
-throw ImageProcessingException::downloadFailed($url, $error_message);
 throw PostGenerationException::missingField('subject');
 ```
 

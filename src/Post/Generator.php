@@ -8,7 +8,6 @@ use LePostClient\Post\PostAssembler;
 use LePostClient\Model\PostIdea;
 use LePostClient\Exceptions\ApiException;
 use LePostClient\Exceptions\ContentGenerationException;
-use LePostClient\Exceptions\ImageProcessingException;
 use LePostClient\Exceptions\PostGenerationException;
 use WP_Error;
 
@@ -154,7 +153,6 @@ class Generator {
      */
     private function process_images(array $raw_image_urls): array {
         $image_urls = [];
-        $image_optimizer = new ImageOptimizer();
         
         foreach ($raw_image_urls as $image_url) {
             $temp_file = null;
@@ -166,29 +164,14 @@ class Generator {
                 $temp_file = \download_url($image_url);
                 
                 if (\is_wp_error($temp_file)) {
-                    throw ImageProcessingException::downloadFailed($image_url, $temp_file->get_error_message());
+                    error_log('LePostClient: Failed to download image: ' . $temp_file->get_error_message() . ' - URL: ' . $image_url);
+                    continue;
                 }
                 
                 // Add enhanced logging for debugging file type issues
                 $file_type = function_exists('mime_content_type') ? mime_content_type($temp_file) : 'unknown';
                 $file_extension = pathinfo($filename, PATHINFO_EXTENSION);
                 error_log('LePostClient: Downloaded image - MIME type: ' . $file_type . ', Extension: ' . $file_extension . ', URL: ' . $image_url);
-                
-                // Optimize the image before uploading to media library
-                $optimized_file = $image_optimizer->optimize($temp_file, $image_url);
-                if ($optimized_file !== $temp_file) {
-                    // If the optimizer created a new file, use that one and clean up the original
-                    if (is_string($temp_file) && file_exists($temp_file)) {
-                        @unlink($temp_file);
-                    }
-                    $temp_file = $optimized_file;
-                    
-                    // Update filename if extension changed (e.g., from PNG to JPG)
-                    $new_extension = pathinfo($optimized_file, PATHINFO_EXTENSION);
-                    if (!empty($new_extension) && $new_extension !== $file_extension) {
-                        $filename = pathinfo($filename, PATHINFO_FILENAME) . '.' . $new_extension;
-                    }
-                }
                 
                 // Prepare file array and upload
                 $file_array = [
@@ -201,7 +184,8 @@ class Generator {
                 $attachment_id = \media_handle_sideload($file_array, 0);
                 
                 if (\is_wp_error($attachment_id)) {
-                    throw ImageProcessingException::uploadFailed($attachment_id->get_error_message());
+                    error_log('LePostClient: Failed to upload image to media library: ' . $attachment_id->get_error_message() . ' - URL: ' . $image_url);
+                    continue;
                 }
                 
                 $permanent_url = \wp_get_attachment_url($attachment_id);
@@ -209,9 +193,6 @@ class Generator {
                     $image_urls[] = $permanent_url;
                     error_log('LePostClient: Successfully uploaded image to media library. URL: ' . $permanent_url);
                 }
-            } catch (ImageProcessingException $e) {
-                error_log('LePostClient Image Processing Error: ' . $e->getMessage() . ' - URL: ' . $image_url);
-                // Continue with the next image rather than failing completely
             } catch (\Exception $e) {
                 error_log('LePostClient Unexpected Error: ' . $e->getMessage() . ' - URL: ' . $image_url);
                 // Continue with the next image
