@@ -1,0 +1,51 @@
+# Operating System files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Editor files
+*.sublime-project
+*.sublime-workspace
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Dependency directories
+node_modules/
+
+# Build directories
+/dist/
+/build/
+
+# WordPress specific
+wp-config.php
+wp-content/advanced-cache.php
+wp-content/backup-guard/
+wp-content/backups/
+wp-content/blogs.dir/
+wp-content/cache/
+wp-content/upgrade/
+wp-content/uploads/
+wp-content/wp-cache-config.php
+
+# Dotenv
+.env
+.env.*
+!.env.example
+
+# Composer - We want to keep vendor for end users
+# vendor/
+# composer.lock
+
+# Tests
+phpunit.xml
+phpunit.xml.dist
+.phpunit.result.cache
+/tests/coverage/ 

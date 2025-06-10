@@ -1,0 +1,33 @@
+lepostclient/
+├── lepostclient.php               # Main plugin bootstrap
+├── composer.json                  # Composer configuration
+├── src/                           # All PHP classes (PSR-4 autoloaded)
+│   ├── Core/
+│   │   ├── Plugin.php             # Main plugin orchestrator
+│   │   ├── Activator.php          # Plugin activation logic
+│   │   └── Deactivator.php        # Plugin deactivation logic
+│   ├── Admin/
+│   │   ├── AdminMenu.php          # Creates admin menu pages
+│   │   ├── Controller/
+│   │   │   ├── DashboardController.php # Logic for Dashboard page
+│   │   │   ├── IdeasListController.php # Logic for Ideas List page
+│   │   │   └── SettingsController.php  # Logic for Settings page
+│   │   └── View/                    # Templates for admin pages
+│   │       ├── dashboard-page.php
+│   │       ├── ideas-list-page.php
+│   │       └── settings-page.php
+│   ├── Api/
+│   │   └── Client.php             # Handles all communication with the external API
+│   ├── Post/
+│   │   └── Generator.php          # Generates WP posts from PostIdea/API data
+│   ├── Settings/
+│   │   └── Manager.php            # Manages plugin settings (API key, etc.)
+│   └── Model/                     # Data model classes
+│       ├── PostIdea.php           # Represents a post idea
+│       └── PostData.php           # Represents data for a post
+├── assets/                        # Public assets (CSS, JS)
+│   ├── css/
+│   │   └── admin-style.css
+│   └── js/
+│       └── admin-script.js
+└── vendor/                        # Composer dependencies (autoloader, etc.)
