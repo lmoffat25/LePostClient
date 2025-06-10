@@ -171,7 +171,7 @@ class IdeasListController {
 
     /**
      * Handles the admin-post action to initiate post generation.
-     * Schedules a WP Cron job and redirects back with a notice.
+     * Processes the generation request directly for maximum reliability.
      */
     public function handle_initiate_generate_post() {
         if (!isset($_POST['lepostclient_initiate_generate_post_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['lepostclient_initiate_generate_post_nonce'])), 'lepostclient_initiate_generate_post_action')) {
@@ -194,39 +194,71 @@ class IdeasListController {
             exit;
         }
         
+        // Update idea status to generating
         $updated_to_generating = $this->idea_repository->update_idea_status((int)$idea_id, 'generating');
         
         if(!$updated_to_generating){
-            error_log("LePostClient: Failed to update idea ID {$idea_id} to 'generating' status before scheduling cron.");
-        }
-
-        $cron_args = [
-            'idea_id' => (int)$idea_id, 
-            'subject' => $idea_subject,
-            'description' => $idea_description,
-        ];
-
-        $event_scheduled = wp_schedule_single_event(time(), 'lepostclient_process_idea_generation_event', [$cron_args]);
-        
-        if ($event_scheduled === false) {
-            error_log("LePostClient CRON_ERROR: wp_schedule_single_event() returned false for idea ID {$idea_id}. The cron event was not scheduled.");
-            $this->idea_repository->update_idea_status((int)$idea_id, 'failed', null, 'Cron scheduling failed.');
+            error_log("LePostClient: Failed to update idea ID {$idea_id} to 'generating' status before generation.");
             add_settings_error(
                 'lepostclient_notices',
-                'generation_schedule_failed',
-                __('Error: Could not schedule the background generation task. The post generation cannot proceed. This might be due to a server configuration issue with WP-Cron. Please try again or contact support.', 'lepostclient'),
+                'status_update_failed',
+                __('Could not update idea status. Please try again.', 'lepostclient'),
                 'error'
             );
-        } else {
+            $redirect_url = admin_url('admin.php?page=lepostclient_ideas_list');
+            wp_safe_redirect($redirect_url);
+            exit;
+        }
+
+        // Process post generation directly
+        try {
+            // Set maximum execution time to 10 minutes to allow for content generation
+            // Note: This may not work on all hosting environments due to server-level restrictions
+            @set_time_limit(600);
+            
+            // Create post idea model
+            $post_idea_model = new \LePostClient\Model\PostIdea($idea_subject, $idea_description);
+            
+            // Generate and save the post
+            $result = $this->post_generator->generate_and_save_post($post_idea_model);
+            
+            if (is_wp_error($result)) {
+                $this->idea_repository->update_idea_status((int)$idea_id, 'failed');
+                add_settings_error(
+                    'lepostclient_notices',
+                    'generation_failed',
+                    sprintf(
+                        __('Post generation for idea "%s" failed: %s', 'lepostclient'),
+                        esc_html($idea_subject),
+                        esc_html($result->get_error_message())
+                    ),
+                    'error'
+                );
+            } else {
+                // Update idea status to completed with the generated post ID
+                $this->idea_repository->update_idea_status((int)$idea_id, 'completed', $result);
+                add_settings_error(
+                    'lepostclient_notices',
+                    'generation_completed',
+                    sprintf(
+                        __('Post generation for idea "%s" completed successfully. <a href="%s">View post</a>', 'lepostclient'),
+                        esc_html($idea_subject),
+                        esc_url(get_edit_post_link($result))
+                    ),
+                    'updated'
+                );
+            }
+        } catch (\Exception $e) {
+            $this->idea_repository->update_idea_status((int)$idea_id, 'failed');
+            error_log('LePostClient Error: ' . $e->getMessage());
             add_settings_error(
                 'lepostclient_notices',
-                'generation_initiated',
+                'generation_exception',
                 sprintf(
-                    __('Post generation for idea "%s" (ID: %s) has been initiated. It will be processed in the background.', 'lepostclient'),
-                    esc_html($idea_subject),
-                    esc_html($idea_id)
+                    __('An error occurred during post generation: %s', 'lepostclient'),
+                    esc_html($e->getMessage())
                 ),
-                'updated'
+                'error'
             );
         }
         
@@ -535,25 +567,46 @@ class IdeasListController {
 
         switch ($action) {
             case 'bulk_generate':
+                // Set time limit to accommodate multiple post generations
+                // This may not work on all hosting environments
+                @set_time_limit(3600); // 1 hour (adjust as needed)
+                
                 foreach ($idea_ids as $idea_id) {
                     $idea = $this->idea_repository->get_idea($idea_id);
                     if ($idea && in_array($idea->status, ['pending', 'failed'])) {
+                        // Update status to generating
                         $this->idea_repository->update_idea_status($idea_id, 'generating');
-                        wp_schedule_single_event(time(), 'lepostclient_process_idea_generation_event', [[
-                            'idea_id' => $idea_id,
-                            'subject' => $idea->subject,
-                            'description' => $idea->description,
-                        ]]);
-                        $processed_count++;
+                        
+                        try {
+                            // Process post generation directly
+                            $post_idea_model = new \LePostClient\Model\PostIdea($idea->subject, $idea->description);
+                            $result = $this->post_generator->generate_and_save_post($post_idea_model);
+                            
+                            if (is_wp_error($result)) {
+                                // Update status to failed
+                                $this->idea_repository->update_idea_status($idea_id, 'failed');
+                                error_log("LePostClient Bulk Generation Error for idea ID {$idea_id}: " . $result->get_error_message());
+                                $error_count++;
+                            } else {
+                                // Update status to completed with the generated post ID
+                                $this->idea_repository->update_idea_status($idea_id, 'completed', $result);
+                                $processed_count++;
+                            }
+                        } catch (\Exception $e) {
+                            // Update status to failed
+                            $this->idea_repository->update_idea_status($idea_id, 'failed');
+                            error_log("LePostClient Bulk Generation Exception for idea ID {$idea_id}: " . $e->getMessage());
+                            $error_count++;
+                        }
                     } else {
                         $error_count++;
                     }
                 }
                 if ($processed_count > 0) {
-                    add_settings_error('lepostclient_notices', 'bulk_generate_success', sprintf(__('Scheduled generation for %d ideas.', 'lepostclient'), $processed_count), 'updated');
+                    add_settings_error('lepostclient_notices', 'bulk_generate_success', sprintf(__('Successfully generated %d posts.', 'lepostclient'), $processed_count), 'updated');
                 }
                 if ($error_count > 0) {
-                    add_settings_error('lepostclient_notices', 'bulk_generate_error', sprintf(__('%d ideas could not be scheduled (either not found, already generated, or currently generating).', 'lepostclient'), $error_count), 'warning');
+                    add_settings_error('lepostclient_notices', 'bulk_generate_error', sprintf(__('%d ideas could not be processed (either not found, already generated, or errors occurred).', 'lepostclient'), $error_count), 'warning');
                 }
                 break;
 

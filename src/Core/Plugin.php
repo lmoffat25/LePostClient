@@ -92,9 +92,6 @@ class Plugin {
 
         // Register the admin-post action for bulk actions
         add_action('admin_post_lepostclient_bulk_actions', [$this->ideas_list_controller, 'handle_bulk_actions']);
-
-        // Register the WP Cron event callback
-        add_action('lepostclient_process_idea_generation_event', [$this, 'lepostclient_process_idea_generation_event_callback'], 10, 1);
     }
 
     private function initialize_updater() {
@@ -126,52 +123,11 @@ class Plugin {
     }
 
     /**
-     * WP Cron callback to process post idea generation.
+     * Helper method to mark an idea as failed.
      *
-     * @param array $args Associative array containing 'idea_id', 'subject', 'description'.
+     * @param int $idea_id The idea ID to mark as failed
+     * @param string $reason The reason for the failure
      */
-    public function lepostclient_process_idea_generation_event_callback($args) {
-        try {
-            if (!is_array($args) || !isset($args['subject']) || !isset($args['idea_id'])) {
-                throw PostGenerationException::invalidArguments('Missing required parameters (subject or idea_id)');
-            }
-            
-            // Initialize components
-            $idea_id_from_cron = $args['idea_id'];
-            $idea_subject = $args['subject'];
-            $idea_description = $args['description'] ?? '';
-            
-            $settings_manager = new SettingsManager();
-            $api_client = new ApiClient($settings_manager);
-            $post_assembler = new PostAssembler();
-            $idea_repository = new IdeaRepository();
-            $post_generator = new PostGenerator($api_client, $settings_manager, $post_assembler);
-            
-            $post_idea_model = new PostIdea($idea_subject, $idea_description);
-            
-            $result = $post_generator->generate_and_save_post($post_idea_model);
-            
-            if (is_wp_error($result)) {
-                throw PostGenerationException::failed($result->get_error_message());
-            }
-            
-            // Update idea status to completed
-            $idea_repository->update_idea_status((int)$idea_id_from_cron, 'completed');
-            
-        } catch (PostGenerationException $e) {
-            error_log('LePostClient Post Generation Error: ' . $e->getMessage());
-            $this->mark_idea_as_failed($idea_id_from_cron, 'Post Generation Error: ' . $e->getMessage());
-        } catch (ContentGenerationException $e) {
-            error_log('LePostClient Content Generation Error: ' . $e->getMessage());
-            $this->mark_idea_as_failed($idea_id_from_cron, 'Content Generation Error: ' . $e->getMessage());
-        } catch (ApiException $e) {
-            error_log('LePostClient API Error: ' . $e->getMessage());
-            $this->mark_idea_as_failed($idea_id_from_cron, 'API Error: ' . $e->getMessage());
-        } catch (\Exception $e) {
-            error_log('LePostClient Cron Error: ' . $e->getMessage());
-            $this->mark_idea_as_failed($idea_id_from_cron, 'Unexpected Error: ' . $e->getMessage());
-        }
-    }
 
     /**
      * Helper method to mark an idea as failed.
@@ -215,8 +171,7 @@ class Plugin {
      * @return void
      */
     private function setup_actions() {
-        // Only register hooks for methods that actually exist in this class
-        add_action('lepostclient_process_idea_generation_event', [$this, 'lepostclient_process_idea_generation_event_callback']);
+        // Nothing to register here
     }
 
     /**
