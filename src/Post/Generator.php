@@ -157,8 +157,8 @@ class Generator {
         foreach ($raw_image_urls as $image_url) {
             $temp_file = null;
             try {
-                // Generate a unique filename based on the URL
-                $filename = basename($image_url);
+                // Extract filename from URL, removing query parameters
+                $filename = basename(parse_url($image_url, PHP_URL_PATH));
                 
                 // Download the image - use global WordPress function
                 $temp_file = \download_url($image_url);
@@ -168,10 +168,17 @@ class Generator {
                     continue;
                 }
                 
+                // Get MIME type from multiple sources in order of priority
+                $file_type = $this->determine_file_mime_type($temp_file, $image_url);
+                $file_extension = $this->determine_file_extension($filename, $file_type);
+                
                 // Add enhanced logging for debugging file type issues
-                $file_type = function_exists('mime_content_type') ? mime_content_type($temp_file) : 'unknown';
-                $file_extension = pathinfo($filename, PATHINFO_EXTENSION);
                 error_log('LePostClient: Downloaded image - MIME type: ' . $file_type . ', Extension: ' . $file_extension . ', URL: ' . $image_url);
+                
+                // Ensure filename has the correct extension
+                if (!empty($file_extension) && pathinfo($filename, PATHINFO_EXTENSION) !== $file_extension) {
+                    $filename = pathinfo($filename, PATHINFO_FILENAME) . '.' . $file_extension;
+                }
                 
                 // Prepare file array and upload
                 $file_array = [
@@ -179,6 +186,7 @@ class Generator {
                     'tmp_name' => $temp_file,
                     'error'    => 0,
                     'size'     => filesize($temp_file),
+                    'type'     => $file_type, // Explicitly set the MIME type
                 ];
                 
                 $attachment_id = \media_handle_sideload($file_array, 0);
@@ -205,5 +213,101 @@ class Generator {
         }
         
         return $image_urls;
+    }
+    
+    /**
+     * Determine the MIME type of a file using multiple methods
+     * 
+     * @param string $file_path Path to the temporary downloaded file
+     * @param string $image_url Original image URL
+     * @return string The determined MIME type
+     */
+    private function determine_file_mime_type(string $file_path, string $image_url): string {
+        // 1. Try to get MIME type from the HTTP response headers (stored by WordPress)
+        $response = \wp_remote_head($image_url, ['timeout' => 30]);
+        if (!is_wp_error($response)) {
+            $content_type = wp_remote_retrieve_header($response, 'content-type');
+            if (!empty($content_type)) {
+                error_log('LePostClient: Found Content-Type header: ' . $content_type . ' for ' . $image_url);
+                return $content_type;
+            }
+        }
+        
+        // 2. Use PHP's fileinfo extension if available
+        if (function_exists('mime_content_type')) {
+            $mime_type = mime_content_type($file_path);
+            if (!empty($mime_type) && $mime_type !== 'application/octet-stream') {
+                return $mime_type;
+            }
+        }
+        
+        // 3. Try to get from Content-Disposition header
+        if (!is_wp_error($response)) {
+            $content_disposition = wp_remote_retrieve_header($response, 'content-disposition');
+            if (!empty($content_disposition) && preg_match('/filename="([^"]+)"/', $content_disposition, $matches)) {
+                $filename = $matches[1];
+                $ext = pathinfo($filename, PATHINFO_EXTENSION);
+                
+                if ($ext === 'webp') {
+                    return 'image/webp';
+                } elseif ($ext === 'png') {
+                    return 'image/png';
+                } elseif ($ext === 'jpg' || $ext === 'jpeg') {
+                    return 'image/jpeg';
+                }
+            }
+        }
+        
+        // 4. Check debug headers that might be added by the server
+        if (!is_wp_error($response)) {
+            $debug_mime = wp_remote_retrieve_header($response, 'x-debug-mime');
+            if (!empty($debug_mime)) {
+                return $debug_mime;
+            }
+        }
+        
+        // 5. Determine from file extension in URL path (without query params)
+        $path = parse_url($image_url, PHP_URL_PATH);
+        $ext = pathinfo($path, PATHINFO_EXTENSION);
+        
+        if ($ext === 'webp') {
+            return 'image/webp';
+        } elseif ($ext === 'png') {
+            return 'image/png';
+        } elseif ($ext === 'jpg' || $ext === 'jpeg') {
+            return 'image/jpeg';
+        }
+        
+        // 6. Fallback to generic image type
+        return 'image/jpeg';
+    }
+    
+    /**
+     * Determine the appropriate file extension based on MIME type and filename
+     * 
+     * @param string $filename Original filename
+     * @param string $mime_type MIME type of the file
+     * @return string The determined file extension
+     */
+    private function determine_file_extension(string $filename, string $mime_type): string {
+        // First check MIME type
+        if ($mime_type === 'image/webp') {
+            return 'webp';
+        } elseif ($mime_type === 'image/png') {
+            return 'png';
+        } elseif ($mime_type === 'image/jpeg') {
+            return 'jpg';
+        }
+        
+        // Then check file extension from filename (without query params)
+        $path = explode('?', $filename)[0];
+        $ext = pathinfo($path, PATHINFO_EXTENSION);
+        
+        if (in_array($ext, ['webp', 'png', 'jpg', 'jpeg'])) {
+            return $ext === 'jpeg' ? 'jpg' : $ext;
+        }
+        
+        // Default to jpg if we can't determine
+        return 'jpg';
     }
 } 

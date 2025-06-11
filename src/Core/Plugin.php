@@ -363,7 +363,7 @@ class Plugin {
         }
         
         // Log the action for debugging
-        error_log('LePostClient: Adding support for additional image MIME types, including ideogram.ai PNG images');
+        error_log('LePostClient: Adding support for additional image MIME types, including ideogram.ai PNG images and WebP');
         
         return $mimes;
     }
@@ -380,19 +380,56 @@ class Plugin {
      * @return array Modified file data
      */
     public function fix_mime_type_detection($data, $file, $filename, $mimes, $real_mime) {
-        if (!empty($data['ext']) && !empty($data['type'])) {
+        // If WordPress already has a valid file type, don't override it
+        if (!empty($data['ext']) && !empty($data['type']) && $data['type'] !== 'application/octet-stream') {
             return $data;
         }
         
-        // Clean filename to handle ideogram.ai URLs that contain query parameters
+        // Clean filename to handle URLs that contain query parameters
         $clean_filename = preg_replace('/\?.*$/', '', $filename);
         $wp_file_type = wp_check_filetype($clean_filename, $mimes);
         
+        // Enhanced logging for debugging
+        error_log('LePostClient: MIME detection - Filename: ' . $filename . ', Clean filename: ' . $clean_filename . 
+                  ', Real MIME: ' . $real_mime . ', WP filetype: ' . print_r($wp_file_type, true));
+        
+        // Handle WebP files
+        if ('webp' === $wp_file_type['ext'] || (strpos($clean_filename, '.webp') !== false)) {
+            $data['ext'] = 'webp';
+            $data['type'] = 'image/webp';
+            error_log('LePostClient: Fixed MIME type detection for WebP file: ' . $filename);
+        }
+        
         // Handle PNG files
-        if ('png' === $wp_file_type['ext'] || (strpos($filename, '.png') !== false)) {
+        else if ('png' === $wp_file_type['ext'] || (strpos($clean_filename, '.png') !== false)) {
             $data['ext'] = 'png';
             $data['type'] = 'image/png';
             error_log('LePostClient: Fixed MIME type detection for PNG file: ' . $filename);
+        }
+        
+        // Handle JPG files
+        else if ('jpg' === $wp_file_type['ext'] || 'jpeg' === $wp_file_type['ext'] || 
+                (strpos($clean_filename, '.jpg') !== false) || (strpos($clean_filename, '.jpeg') !== false)) {
+            $data['ext'] = 'jpg';
+            $data['type'] = 'image/jpeg';
+            error_log('LePostClient: Fixed MIME type detection for JPEG file: ' . $filename);
+        }
+        
+        // Check actual file content for image type if still undetected
+        if (empty($data['type']) || $data['type'] === 'application/octet-stream') {
+            // Check for WebP signature
+            $handle = fopen($file, 'rb');
+            if ($handle) {
+                $header = fread($handle, 12);
+                fclose($handle);
+                
+                // Check WebP signature - "RIFF" + 4 bytes + "WEBP"
+                if (substr($header, 0, 4) === 'RIFF' && substr($header, 8, 4) === 'WEBP') {
+                    $data['ext'] = 'webp';
+                    $data['type'] = 'image/webp';
+                    error_log('LePostClient: Identified WebP by file signature: ' . $filename);
+                }
+            }
         }
         
         // Additional check for ideogram.ai images
@@ -400,6 +437,25 @@ class Plugin {
             $data['ext'] = 'png';
             $data['type'] = 'image/png';
             error_log('LePostClient: Forced PNG type for ideogram.ai image: ' . $filename);
+        }
+        
+        // If we have a real MIME but no detected type, use the real MIME as a fallback
+        if ((empty($data['type']) || $data['type'] === 'application/octet-stream') && 
+            !empty($real_mime) && $real_mime !== 'application/octet-stream') {
+            // Map common MIME types to extensions
+            $mime_to_ext = [
+                'image/webp' => 'webp',
+                'image/png' => 'png',
+                'image/jpeg' => 'jpg',
+                'image/jpg' => 'jpg',
+                'image/gif' => 'gif'
+            ];
+            
+            if (isset($mime_to_ext[$real_mime])) {
+                $data['ext'] = $mime_to_ext[$real_mime];
+                $data['type'] = $real_mime;
+                error_log('LePostClient: Used real MIME type as fallback: ' . $real_mime);
+            }
         }
         
         return $data;
