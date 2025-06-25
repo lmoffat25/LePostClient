@@ -11,7 +11,7 @@ class Client {
     private SettingsManager $settings_manager;
     private ?string $api_key = null;
 
-    private string $api_base_url = 'https://dev-wordpress.agence-web-prism.fr/wp-json/le-post/v1'; 
+    private string $api_base_url = 'https://agence-web-prism.fr/wp-json/le-post/v1'; 
 
     public function __construct(SettingsManager $settings_manager) {
         $this->settings_manager = $settings_manager;
