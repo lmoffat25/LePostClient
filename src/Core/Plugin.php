@@ -7,6 +7,7 @@ use LePostClient\Admin\AdminMenu;
 use LePostClient\Admin\Controller\DashboardController;
 use LePostClient\Admin\Controller\IdeasListController;
 use LePostClient\Admin\Controller\SettingsController;
+use LePostClient\Admin\Controller\ApiKeySetupController;
 use LePostClient\Api\Client as ApiClient;
 use LePostClient\Settings\Manager as SettingsManager;
 use LePostClient\Post\Generator as PostGenerator;
@@ -27,6 +28,7 @@ class Plugin {
     protected AdminMenu $admin_menu;
     protected IdeasListController $ideas_list_controller;
     protected SettingsController $settings_controller;
+    protected ApiKeySetupController $api_key_setup_controller;
 
     public function __construct() {
         // Initialize core components that don't have external dependencies first
@@ -49,6 +51,7 @@ class Plugin {
             $this->idea_repository
         );
         $this->settings_controller = new SettingsController($this->settings_manager, $this->api_client);
+        $this->api_key_setup_controller = new ApiKeySetupController($this->settings_manager);
 
         $this->admin_menu = new AdminMenu(
             $dashboard_controller,
@@ -72,6 +75,9 @@ class Plugin {
         // Register the admin-post action for saving settings
         add_action('admin_post_lepostclient_save_settings', [$this->settings_controller, 'handle_save_settings']);
 
+        // Register the admin-post action for saving API key from setup screen
+        add_action('admin_post_lepostclient_save_api_key_setup', [$this->api_key_setup_controller, 'handle_save_api_key']);
+
         // Register the admin-post action for initiating post generation
         add_action('admin_post_lepostclient_initiate_generate_post', [$this->ideas_list_controller, 'handle_initiate_generate_post']);
 
@@ -92,6 +98,74 @@ class Plugin {
 
         // Register the admin-post action for bulk actions
         add_action('admin_post_lepostclient_bulk_actions', [$this->ideas_list_controller, 'handle_bulk_actions']);
+
+        // Add hook to check if API key is set and show setup screen if not
+        add_action('admin_init', [$this, 'check_api_key']);
+    }
+
+    /**
+     * Check if API key is set and show setup screen if not
+     * 
+     * @since 1.0.3
+     * 
+     * @return void
+     */
+    public function check_api_key(): void {
+        // Skip for AJAX requests
+        if (wp_doing_ajax()) {
+            return;
+        }
+
+        // Skip for non-admin pages
+        if (!is_admin()) {
+            return;
+        }
+
+        // Skip for admin-post.php actions
+        if (wp_doing_action('admin_post_lepostclient_save_api_key_setup')) {
+            return;
+        }
+        
+        // Get current screen
+        $screen = get_current_screen();
+        
+        // Skip for login, plugins and update pages
+        if (!$screen || in_array($screen->id, ['plugins', 'update', 'update-core'])) {
+            return;
+        }
+        
+        // Check if API key is set
+        if (!$this->settings_manager->is_configured()) {
+            // Show API key setup screen
+            add_action('admin_notices', [$this, 'render_api_key_setup']);
+            add_action('admin_footer', [$this, 'add_api_key_setup_styles']);
+        }
+    }
+
+    /**
+     * Render API key setup screen
+     * 
+     * @since 1.0.3
+     * 
+     * @return void
+     */
+    public function render_api_key_setup(): void {
+        $this->api_key_setup_controller->render_page();
+    }
+
+    /**
+     * Add styles to hide admin content when showing API key setup screen
+     * 
+     * @since 1.0.3
+     * 
+     * @return void
+     */
+    public function add_api_key_setup_styles(): void {
+        echo '<style>
+            #wpcontent > *:not(.lepc-api-key-setup-overlay):not(#wpfooter) {
+                display: none !important;
+            }
+        </style>';
     }
 
     private function initialize_updater() {
@@ -157,7 +231,10 @@ class Plugin {
             $main_menu_slug . '_page_lepostclient_settings' 
         ];
         
-        if (strpos($hook_suffix, 'lepostclient') !== false) {
+        // Always load styles if API key is not configured, since the setup screen can appear on any admin page
+        $is_api_key_configured = $this->settings_manager->is_configured();
+        
+        if (strpos($hook_suffix, 'lepostclient') !== false || !$is_api_key_configured) {
             $version = defined('LEPOCLIENT_VERSION') ? LEPOCLIENT_VERSION : '1.0.0';
             wp_enqueue_style('lepostclient-admin-style', plugin_dir_url( dirname( __FILE__, 2 ) ) . 'assets/css/admin-style.css', [], $version );
             wp_enqueue_script('lepostclient-admin-script', plugin_dir_url( dirname( __FILE__, 2 ) ) . 'assets/js/admin-script.js', ['jquery'], $version, true );

@@ -16,8 +16,8 @@ class PostAssembler {
      * Assembles the final post content by inserting images into the HTML structure.
      *
      * The HTML content is expected to be structured with <section> tags.
-     * An image will be inserted before each closing </section> tag, cycling through
-     * the provided image URLs if there are more sections than images, or until
+     * Images are inserted after the first content section, and then before each closing </section> tag,
+     * cycling through the provided image URLs if there are more sections than images, or until
      * all images are used if there are more images than sections.
      *
      * @since 1.0.0
@@ -42,27 +42,33 @@ class PostAssembler {
             $tag_len = strlen($section_close_tag);
             $image_count = count($image_urls);
             $current_image_index = 0;
+            $section_count = 0;
 
             while (($pos = stripos($html_content, $section_close_tag, $last_pos)) !== false && $current_image_index < $image_count) {
+                $section_count++;
+                
                 // Add content up to the section closing tag
                 $output_html .= substr($html_content, $last_pos, $pos - $last_pos);
                 
-                // Add image before the closing tag
-                $image_url = esc_url($image_urls[$current_image_index]);
-                $image_tag = sprintf(
-                    '<figure class="wp-block-image size-large"><img src="%s" alt="%s"></figure>', 
-                    $image_url, 
-                    esc_attr__('Generated image', 'lepostclient')
-                );
-                
-                $output_html .= $image_tag;
+                // Only add images after the first content section (skip intro section)
+                if ($section_count > 1) {
+                    // Add image before the closing tag
+                    $image_url = esc_url($image_urls[$current_image_index]);
+                    $image_tag = sprintf(
+                        '<figure class="wp-block-image size-large"><img src="%s" alt="%s"></figure>', 
+                        $image_url, 
+                        esc_attr__('Generated image', 'lepostclient')
+                    );
+                    
+                    $output_html .= $image_tag;
+                    $current_image_index++;
+                }
                 
                 // Add the section closing tag
                 $output_html .= $section_close_tag;
                 
                 // Move position past this section
                 $last_pos = $pos + $tag_len;
-                $current_image_index++;
             }
 
             // Add any remaining content
