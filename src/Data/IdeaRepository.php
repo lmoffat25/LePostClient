@@ -27,8 +27,8 @@ class IdeaRepository {
             'description'      => null,
             'status'           => 'pending',
             'api_theme_source' => null,
-            'creation_date'    => current_time('mysql', true), // GMT time
-            'last_modified_date' => current_time('mysql', true), // GMT time
+            'creation_date'    => current_time('mysql'), // Local time (based on WordPress settings)
+            'last_modified_date' => current_time('mysql'), // Local time (based on WordPress settings)
         ];
         $data = wp_parse_args($data, $defaults);
 
@@ -145,7 +145,7 @@ class IdeaRepository {
             [
                 'subject' => $new_subject,
                 'description' => $new_description,
-                'last_modified_date' => current_time('mysql', true),
+                'last_modified_date' => current_time('mysql'),
             ],
             ['id' => $idea_id],
             [
@@ -169,7 +169,7 @@ class IdeaRepository {
     public function update_idea_status(int $idea_id, string $new_status, ?int $generated_post_id = null): bool {
         $data_to_update = [
             'status' => $new_status,
-            'last_modified_date' => current_time('mysql', true)
+            'last_modified_date' => current_time('mysql')
         ];
         $formats = ['%s', '%s']; // status, last_modified_date
 

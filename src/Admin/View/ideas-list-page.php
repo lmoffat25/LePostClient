@@ -157,7 +157,12 @@
                         $idea_description_raw = $idea->description;
                         $idea_subject_display = esc_html( $idea->subject );
                         $idea_status = esc_html( $idea->status );
-                        $idea_creation_date = esc_html( mysql2date( get_option( 'date_format' ) . ' ' . get_option('time_format'), $idea->creation_date ) );
+                        
+                        // Format the date according to WordPress settings, ensuring proper localization
+                        $date_format = get_option('date_format');
+                        $time_format = get_option('time_format');
+                        $idea_creation_date = esc_html(mysql2date("$date_format $time_format", $idea->creation_date));
+                        
                         $can_generate = in_array($idea->status, ['pending', 'failed']);
                         $generated_post_id = $idea->generated_post_id ? (int) $idea->generated_post_id : null;
                         ?>
