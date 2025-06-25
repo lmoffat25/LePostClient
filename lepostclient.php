@@ -3,7 +3,7 @@
  * Plugin Name: Le Post Client
  * Plugin URI:  https://example.com/lepostclient
  * Description: A client plugin to generate posts from an API.
- * Version:     1.0.0
+ * Version:     1.0.1
  * Author:      Your Name
  * Author URI:  https://example.com
  * License:     GPLv2 or later
