@@ -142,3 +142,11 @@ function run_le_post_client_plugin()
 
 // Use the 'plugins_loaded' hook to ensure all plugins are loaded before starting ours.
 add_action('plugins_loaded', 'run_le_post_client_plugin');
+
+/**
+ * Load plugin textdomain.
+ */
+function lepostclient_load_textdomain() {
+    load_plugin_textdomain( 'lepostclient', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
+}
+add_action( 'plugins_loaded', 'lepostclient_load_textdomain' );

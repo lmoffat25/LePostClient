@@ -1,0 +1,57 @@
+# Copyright (C) 2024 Leon Moffat
+# This file is distributed under the same license as the Le Post Client plugin.
+msgid ""
+msgstr ""
+"Project-Id-Version: Le Post Client 1.0.3\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/lepostclient\n"
+"Last-Translator: Leon Moffat\n"
+"Language-Team: French\n"
+"Language: fr_FR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2024-06-15T12:00:00+00:00\n"
+"PO-Revision-Date: 2024-06-15T12:00:00+00:00\n"
+"X-Generator: WP-CLI 2.8.1\n"
+"X-Domain: lepostclient\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: src/Admin/View/api-key-setup-page.php:3
+msgid "Welcome to Le Post Client"
+msgstr "Bienvenue sur Le Post Client"
+
+#: src/Admin/View/api-key-setup-page.php:8
+msgid "To get started, please enter your API key below. This key is required to connect to the Le Post service and generate content."
+msgstr "Pour commencer, veuillez saisir votre clé API ci-dessous. Cette clé est nécessaire pour se connecter au service Le Post et générer du contenu."
+
+#: src/Admin/View/api-key-setup-page.php:25
+msgid "API Key"
+msgstr "Clé API"
+
+#: src/Admin/View/api-key-setup-page.php:31
+msgid "Don't have an API key? Get one from %s"
+msgstr "Vous n'avez pas de clé API ? Obtenez-en une depuis %s"
+
+#: src/Admin/View/api-key-setup-page.php:32
+msgid "your account page"
+msgstr "votre page de compte"
+
+#: src/Admin/View/api-key-setup-page.php:39
+msgid "Save API Key"
+msgstr "Enregistrer la clé API"
+
+#: src/Admin/Controller/ApiKeySetupController.php:75
+msgid "API key cannot be empty."
+msgstr "La clé API ne peut pas être vide."
+
+#: src/Admin/Controller/ApiKeySetupController.php:87
+msgid "API key saved successfully."
+msgstr "Clé API enregistrée avec succès."
+
+#: src/Admin/Controller/ApiKeySetupController.php:45
+msgid "You do not have sufficient permissions to access this page."
+msgstr "Vous n'avez pas les permissions suffisantes pour accéder à cette page."
+
+#: src/Admin/Controller/ApiKeySetupController.php:50
+msgid "Nonce verification failed."
+msgstr "La vérification du nonce a échoué." 

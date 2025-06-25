@@ -1,0 +1,55 @@
+# Copyright (C) 2024 Leon Moffat
+# This file is distributed under the same license as the Le Post Client plugin.
+msgid ""
+msgstr ""
+"Project-Id-Version: Le Post Client 1.0.3\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/lepostclient\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2024-06-15T12:00:00+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.8.1\n"
+"X-Domain: lepostclient\n"
+
+#: src/Admin/View/api-key-setup-page.php:3
+msgid "Welcome to Le Post Client"
+msgstr ""
+
+#: src/Admin/View/api-key-setup-page.php:8
+msgid "To get started, please enter your API key below. This key is required to connect to the Le Post service and generate content."
+msgstr ""
+
+#: src/Admin/View/api-key-setup-page.php:25
+msgid "API Key"
+msgstr ""
+
+#: src/Admin/View/api-key-setup-page.php:31
+msgid "Don't have an API key? Get one from %s"
+msgstr ""
+
+#: src/Admin/View/api-key-setup-page.php:32
+msgid "your account page"
+msgstr ""
+
+#: src/Admin/View/api-key-setup-page.php:39
+msgid "Save API Key"
+msgstr ""
+
+#: src/Admin/Controller/ApiKeySetupController.php:75
+msgid "API key cannot be empty."
+msgstr ""
+
+#: src/Admin/Controller/ApiKeySetupController.php:87
+msgid "API key saved successfully."
+msgstr ""
+
+#: src/Admin/Controller/ApiKeySetupController.php:45
+msgid "You do not have sufficient permissions to access this page."
+msgstr ""
+
+#: src/Admin/Controller/ApiKeySetupController.php:50
+msgid "Nonce verification failed."
+msgstr "" 

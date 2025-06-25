@@ -13,6 +13,7 @@ Le Post Client is a WordPress plugin that helps you generate posts using an API 
 - Control the writing style and content parameters
 - Track credits and usage statistics
 - Seamless WordPress integration
+- Available in French and English
 
 ## Installation
 
@@ -26,6 +27,14 @@ Le Post Client is a WordPress plugin that helps you generate posts using an API 
 - WordPress 5.8 or higher
 - PHP 8.0 or higher
 - Active API key for the content generation service
+
+## Translations
+
+The plugin is available in the following languages:
+- English (default)
+- French (fr_FR)
+
+If you want to contribute translations or improve existing ones, you can edit the PO files in the `languages` directory.
 
 ## Changelog
 

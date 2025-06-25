@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - API key setup screen that appears on all admin pages when API key is not configured
 - Direct link to account page to retrieve API key
+- French translations for the plugin interface
+- Translation support with textdomain loading
 
 ## [1.0.0] - 2024-06-01
 
