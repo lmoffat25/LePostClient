@@ -11,10 +11,11 @@ class Client {
     private SettingsManager $settings_manager;
     private ?string $api_key = null;
 
-    private string $api_base_url = 'https://agence-web-prism.fr/wp-json/le-post/v1'; 
+    private string $api_base_url;
 
     public function __construct(SettingsManager $settings_manager) {
         $this->settings_manager = $settings_manager;
+        $this->api_base_url = defined('LEPOSTCLIENT_API_BASE_URL') ? LEPOSTCLIENT_API_BASE_URL : 'https://agence-web-prism.fr/wp-json/le-post/v1';
     }
 
     private function get_api_key(): ?string {

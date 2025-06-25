@@ -16,6 +16,11 @@ if ( ! defined( 'LEPOCLIENT_VERSION' ) ) {
     define( 'LEPOCLIENT_VERSION', '1.0.0' );
 }
 
+// Define API endpoint URL constant
+if ( ! defined( 'LEPOSTCLIENT_API_BASE_URL' ) ) {
+    define( 'LEPOSTCLIENT_API_BASE_URL', 'https://agence-web-prism.fr/wp-json/le-post/v1' );
+}
+
 // If this file is called directly, abort.
 if ( ! defined( 'WPINC' ) ) {
 	die;
