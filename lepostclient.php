@@ -13,7 +13,7 @@
 
 // Define plugin version constant
 if ( ! defined( 'LEPOCLIENT_VERSION' ) ) {
-    define( 'LEPOCLIENT_VERSION', '1.0.0' );
+    define( 'LEPOCLIENT_VERSION', '1.0.1' );
 }
 
 // Define API endpoint URL constant
