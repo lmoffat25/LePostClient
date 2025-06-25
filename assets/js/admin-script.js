@@ -1,14 +1,12 @@
-// Le Post Client Admin Scripts
+const main = () => {
+
+}
 
 jQuery(document).ready(function($) {
-    // Example: Click handler for a button
-    // $('.my-plugin-button').on('click', function() {
-    //     alert('Button clicked!');
-    //     // You can add AJAX calls here, for example
-    // });
+    main();
+});
 
-    // console.log('Le Post Client admin script loaded.');
-
+jQuery(document).ready(function($) {
     // Generate Modal elements
     var generateModal = $('#lepc-generate-confirm-modal');
     var modalText = $('#lepc-modal-text');
@@ -18,6 +16,21 @@ jQuery(document).ready(function($) {
     var cancelGenerateModalButton = $('#lepc-modal-cancel-button'); // Renamed for clarity
     var confirmGenerateButton = $('#lepc-modal-confirm-generate-button');
     var generateModalForm = $('#lepc-generate-modal-form');
+    
+    // Progress bar elements
+    var modalProgressContainer = $('#lepc-modal-progress-container');
+    var modalProgressBar = $('#lepc-modal-progress-bar');
+    var modalProgressText = $('#lepc-modal-progress-text');
+    
+    // Progress bar configuration
+    var progressConfig = {
+        estimatedTime: 120000, // 120 seconds (adjust based on average generation time)
+        updateInterval: 500, // Update every 500ms
+        maxProgress: 95 // Maximum progress percentage before completion
+    };
+    
+    // Store progress intervals by idea ID
+    var progressIntervals = {};
 
     // Edit Modal elements
     var editModal = $('#lepc-edit-idea-modal');
@@ -49,6 +62,9 @@ jQuery(document).ready(function($) {
         modalIdeaSubjectInput.val(ideaSubject);
         modalIdeaDescriptionInput.val(ideaDescription);
         confirmGenerateButton.prop('disabled', false).text('Confirm & Generate');
+        modalProgressContainer.hide();
+        modalProgressBar.css('width', '0%');
+        modalProgressText.text('0%');
         generateModal.show();
     });
 
@@ -59,8 +75,67 @@ jQuery(document).ready(function($) {
 
     // Handle Confirm & Generate button click (form submission is type=submit now)
     generateModalForm.on('submit', function() {
-        confirmGenerateButton.prop('disabled', true).text('Initiating...');
+        confirmGenerateButton.prop('disabled', true).text('Generating...');
+        cancelGenerateModalButton.prop('disabled', true);
+        modalText.text('Generating post, please wait...');
+        
+        // Show progress bar
+        modalProgressContainer.show();
+        
+        // Start progress simulation
+        var ideaId = modalIdeaIdInput.val();
+        startProgressSimulation(ideaId);
+        
         // Allow default form submission to proceed
+    });
+    
+    /**
+     * Start simulating progress for an idea
+     * @param {string} ideaId The ID of the idea being generated
+     */
+    function startProgressSimulation(ideaId) {
+        // Clear any existing interval for this idea
+        if (progressIntervals[ideaId]) {
+            clearInterval(progressIntervals[ideaId]);
+        }
+        
+        var startTime = Date.now();
+        var currentProgress = 0;
+        
+        // Update both the modal progress bar and the table row progress bar
+        progressIntervals[ideaId] = setInterval(function() {
+            var elapsedTime = Date.now() - startTime;
+            var progressPercentage = Math.min(
+                Math.round((elapsedTime / progressConfig.estimatedTime) * 100),
+                progressConfig.maxProgress
+            );
+            
+            if (progressPercentage > currentProgress) {
+                currentProgress = progressPercentage;
+                
+                // Update modal progress bar if visible
+                if (modalProgressContainer.is(':visible')) {
+                    modalProgressBar.css('width', currentProgress + '%');
+                    modalProgressText.text(currentProgress + '%');
+                }
+                
+                // Update table row progress bar
+                $('.lepc-small-progress-bar[data-idea-id="' + ideaId + '"]').css('width', currentProgress + '%');
+                
+                // If we've reached max progress, stop the interval
+                if (currentProgress >= progressConfig.maxProgress) {
+                    clearInterval(progressIntervals[ideaId]);
+                }
+            }
+        }, progressConfig.updateInterval);
+    }
+    
+    // Check for generating ideas on page load and start progress bars
+    $('.lepc-small-progress-bar').each(function() {
+        var ideaId = $(this).data('idea-id');
+        if (ideaId) {
+            startProgressSimulation(ideaId);
+        }
     });
 
     // Open Edit modal
@@ -188,6 +263,20 @@ jQuery(document).ready(function($) {
             if (!confirm('Are you sure you want to delete the selected ' + selectedIdeas + ' idea(s)? This action cannot be undone.')) {
                 event.preventDefault();
             }
+        }
+        
+        // If bulk generate action is selected, show progress bars for selected ideas
+        if (!event.defaultPrevented && selectedAction === 'bulk_generate') {
+            $('input[name="post_idea_ids[]"]:checked').each(function() {
+                var ideaId = $(this).val();
+                var statusCell = $(this).closest('tr').find('.status.column-status');
+                
+                // Add progress bar to status cell if not already present
+                if (statusCell.find('.lepc-small-progress-container').length === 0) {
+                    statusCell.html('Generating <div class="lepc-small-progress-container"><div class="lepc-small-progress-bar" data-idea-id="' + ideaId + '"></div></div>');
+                    startProgressSimulation(ideaId);
+                }
+            });
         }
         
         if (event.defaultPrevented) {

@@ -207,7 +207,9 @@
                             <td class="status column-status" data-colname="Status">
                                 <?php echo ucfirst($idea_status); ?>
                                 <?php if ($idea->status === 'generating'): ?>
-                                    <span class="spinner is-active" style="float:none; vertical-align: middle;"></span>
+                                    <div class="lepc-small-progress-container">
+                                        <div class="lepc-small-progress-bar" data-idea-id="<?php echo $idea_id; ?>"></div>
+                                    </div>
                                 <?php endif; ?>
                             </td>
                             <td class="date column-date" data-colname="Creation Date">
@@ -303,6 +305,14 @@
         <div class="lepc-modal-content">
             <h3 id="lepc-modal-title"><?php esc_html_e( 'Confirm Post Generation', 'lepostclient' ); ?></h3>
             <p id="lepc-modal-text"></p>
+            
+            <!-- Add progress bar container (initially hidden) -->
+            <div id="lepc-modal-progress-container" class="lepc-progress-container" style="display:none;">
+                <div id="lepc-modal-progress-bar" class="lepc-progress-bar">
+                    <span id="lepc-modal-progress-text" class="lepc-progress-text">0%</span>
+                </div>
+            </div>
+            
             <div class="lepc-modal-actions">
                 <button type="button" id="lepc-modal-cancel-button" class="button"><?php esc_html_e( 'Cancel', 'lepostclient' ); ?></button>
                 <form method="POST" action="<?php echo esc_url( admin_url('admin-post.php') ); ?>" style="display: inline;" id="lepc-generate-modal-form">

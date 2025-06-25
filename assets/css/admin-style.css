@@ -138,4 +138,52 @@
 
 .lepc-api-key-setup-actions .button {
     min-width: 120px;
+}
+
+/* Progress Bar Styles */
+.lepc-progress-container {
+    width: 100%;
+    background-color: #f1f1f1;
+    border-radius: 4px;
+    margin: 15px 0;
+    overflow: hidden;
+}
+
+.lepc-progress-bar {
+    height: 20px;
+    background-color: #2271b1;
+    width: 0;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+    position: relative;
+}
+
+.lepc-progress-text {
+    position: absolute;
+    right: 5px;
+    color: white;
+    font-weight: bold;
+    font-size: 12px;
+    line-height: 20px;
+}
+
+/* Small progress bar for table rows */
+.lepc-small-progress-container {
+    width: 100%;
+    max-width: 100px;
+    height: 10px;
+    background-color: #f1f1f1;
+    border-radius: 3px;
+    margin: 5px 0;
+    display: inline-block;
+    vertical-align: middle;
+    overflow: hidden;
+}
+
+.lepc-small-progress-bar {
+    height: 100%;
+    background-color: #2271b1;
+    width: 0;
+    border-radius: 3px;
+    transition: width 0.5s ease;
 } 
