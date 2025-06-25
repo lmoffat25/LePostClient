@@ -1,11 +1,11 @@
 <?php
 /**
  * Plugin Name: Le Post Client
- * Plugin URI:  https://example.com/lepostclient
+ * Plugin URI:  https://leonmoffat.com/lepostclient
  * Description: A client plugin to generate posts from an API.
- * Version:     1.0.1
- * Author:      Your Name
- * Author URI:  https://example.com
+ * Version:     1.0.2
+ * Author:      Leon Moffat
+ * Author URI:  https://leonmoffat.com
  * License:     GPLv2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: lepostclient
@@ -13,7 +13,7 @@
 
 // Define plugin version constant
 if ( ! defined( 'LEPOCLIENT_VERSION' ) ) {
-    define( 'LEPOCLIENT_VERSION', '1.0.1' );
+    define( 'LEPOCLIENT_VERSION', '1.0.2' );
 }
 
 // Define API endpoint URL constant
