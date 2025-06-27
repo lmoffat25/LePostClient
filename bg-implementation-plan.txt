@@ -1,0 +1,34 @@
+# Background Processing Implementation Plan for LePostClient
+
+## Current Status
+- WP Background Processing library installed via Composer
+- Library is ready to be used for implementing asynchronous processing
+
+## Implementation Plan
+
+### Phase 1: Create Post Generation Process Class
+1. Create a new class `Post_Generation_Process` that extends `WP_Background_Process`
+2. Implement the required methods:
+   - `task()`: Handle processing a single post generation request
+   - `complete()`: Actions to take when all queued items are processed
+
+### Phase 2: Integrate with Post Generator
+1. Modify `src/Post/Generator.php` to use the background process
+2. Add method to queue post generation requests instead of processing them immediately
+3. Update status tracking to work with asynchronous processing
+
+### Phase 3: Update Controllers
+1. Modify `src/Admin/Controller/IdeasListController.php` to dispatch to background process
+2. Remove extended time limit settings as they'll no longer be needed
+3. Add status indicators for in-progress generations
+
+### Phase 4: Add Status Tracking
+1. Create a method to track the status of background processes
+2. Add UI elements to show progress to users
+3. Implement error handling for failed background tasks
+
+## Benefits
+- Improved user experience with non-blocking UI
+- Better handling of long-running API requests
+- Support for bulk operations without timeout issues
+- Reduced server load by processing tasks in the background

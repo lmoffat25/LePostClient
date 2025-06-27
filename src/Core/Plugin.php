@@ -17,6 +17,7 @@ use LePostClient\Data\IdeaRepository;
 use LePostClient\Exceptions\ApiException;
 use LePostClient\Exceptions\ContentGenerationException;
 use LePostClient\Exceptions\PostGenerationException;
+use LePostClient\Process\Post_Generation_Process;
 use Puc_v5p6_Factory;
 
 class Plugin {
@@ -29,6 +30,7 @@ class Plugin {
     protected IdeasListController $ideas_list_controller;
     protected SettingsController $settings_controller;
     protected ApiKeySetupController $api_key_setup_controller;
+    protected Post_Generation_Process $post_generation_process;
 
     public function __construct() {
         // Initialize core components that don't have external dependencies first
@@ -41,6 +43,9 @@ class Plugin {
 
         // Initialize components that depend on other initialized components
         $this->post_generator = new PostGenerator($this->api_client, $this->settings_manager, $post_assembler);
+        
+        // Initialize the background process
+        $this->post_generation_process = new Post_Generation_Process($this->post_generator, $this->idea_repository);
 
         // Initialize admin-specific components
         $dashboard_controller = new DashboardController($this->api_client, $this->settings_manager);
@@ -48,7 +53,8 @@ class Plugin {
             $this->api_client, 
             $this->post_generator, 
             $this->settings_manager, 
-            $this->idea_repository
+            $this->idea_repository,
+            $this->post_generation_process // Pass the background process to the controller
         );
         $this->settings_controller = new SettingsController($this->settings_manager, $this->api_client);
         $this->api_key_setup_controller = new ApiKeySetupController($this->settings_manager);
@@ -120,25 +126,12 @@ class Plugin {
         if (!is_admin()) {
             return;
         }
-
-        // Skip for admin-post.php actions
-        if (wp_doing_action('admin_post_lepostclient_save_api_key_setup')) {
-            return;
-        }
-        
-        // Get current screen
-        $screen = get_current_screen();
-        
-        // Skip for login, plugins and update pages
-        if (!$screen || in_array($screen->id, ['plugins', 'update', 'update-core'])) {
-            return;
-        }
         
         // Check if API key is set
-        if (!$this->settings_manager->is_configured()) {
-            // Show API key setup screen
-            add_action('admin_notices', [$this, 'render_api_key_setup']);
-            add_action('admin_footer', [$this, 'add_api_key_setup_styles']);
+        if (!$this->settings_manager->is_configured() && $this->should_show_api_key_setup()) {
+            // Use admin_notices with priority 0 to ensure it runs first
+            add_action('admin_notices', [$this, 'render_api_key_setup'], 0);
+            add_action('admin_head', [$this, 'add_api_key_setup_styles']);
         }
     }
 
@@ -150,7 +143,57 @@ class Plugin {
      * @return void
      */
     public function render_api_key_setup(): void {
-        $this->api_key_setup_controller->render_page();
+        // Output the overlay div here with proper styling
+        ?>
+        <div class="lepc-api-key-setup-overlay" style="
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 999999;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        ">
+            <?php $this->api_key_setup_controller->render_page(); ?>
+        </div>
+        <?php
+    }
+
+    /**
+     * Determine if we should show the API key setup screen on the current page
+     *
+     * @since 1.0.4
+     *
+     * @return bool True if we should show the API key setup screen
+     */
+    private function should_show_api_key_setup(): bool {
+        global $pagenow;
+        
+        // Don't show on these pages
+        $excluded_pages = [
+            'plugins.php',
+            'update.php',
+            'update-core.php',
+            'admin-ajax.php',
+            'admin-post.php',
+            'async-upload.php',
+            'media-upload.php',
+            'customize.php'
+        ];
+        
+        if (in_array($pagenow, $excluded_pages)) {
+            return false;
+        }
+        
+        // Don't show on plugin/theme installation pages
+        if ($pagenow === 'plugin-install.php' || $pagenow === 'theme-install.php') {
+            return false;
+        }
+        
+        return true;
     }
 
     /**
@@ -161,11 +204,34 @@ class Plugin {
      * @return void
      */
     public function add_api_key_setup_styles(): void {
-        echo '<style>
-            #wpcontent > *:not(.lepc-api-key-setup-overlay):not(#wpfooter) {
-                display: none !important;
+        ?>
+        <style>
+            /* Ensure our overlay is visible and on top */
+            .lepc-api-key-setup-overlay {
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                bottom: 0 !important;
+                z-index: 999999 !important;
+                background-color: rgba(0, 0, 0, 0.7) !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
             }
-        </style>';
+            
+            /* Style the container */
+            .lepc-api-key-setup-container {
+                background-color: #fff;
+                border-radius: 5px;
+                box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+                width: 100%;
+                max-width: 500px;
+                padding: 30px;
+                text-align: center;
+            }
+        </style>
+        <?php
     }
 
     private function initialize_updater() {
@@ -538,5 +604,24 @@ class Plugin {
         }
         
         return $data;
+    }
+
+    /**
+     * Helper method to check if a specific admin-post action is being performed
+     * This is a safer alternative to wp_doing_action() which may not be available in all WP versions
+     *
+     * @since 1.0.4
+     * @param string $action The action name to check for
+     * @return bool True if the specified admin-post action is being performed
+     */
+    private function is_admin_post_action(string $action): bool {
+        // Check if we're on admin-post.php
+        $is_admin_post = (strpos($_SERVER['PHP_SELF'] ?? '', 'admin-post.php') !== false);
+        
+        // Check if the specified action is being performed
+        $current_action = $_POST['action'] ?? $_GET['action'] ?? '';
+        $is_target_action = ($current_action === $action);
+        
+        return $is_admin_post && $is_target_action;
     }
 } 

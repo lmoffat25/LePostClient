@@ -7,6 +7,7 @@ use LePostClient\Post\Generator as PostGenerator;
 use LePostClient\Settings\Manager as SettingsManager;
 use LePostClient\Model\PostIdea;
 use LePostClient\Data\IdeaRepository;
+use LePostClient\Process\Post_Generation_Process;
 
 class IdeasListController {
 
@@ -14,17 +15,20 @@ class IdeasListController {
     private PostGenerator $post_generator;
     private SettingsManager $settings_manager;
     private IdeaRepository $idea_repository;
+    private Post_Generation_Process $post_generation_process;
 
     public function __construct(
         ApiClient $api_client, 
         PostGenerator $post_generator, 
         SettingsManager $settings_manager, 
-        IdeaRepository $idea_repository
+        IdeaRepository $idea_repository,
+        Post_Generation_Process $post_generation_process = null
     ) {
         $this->api_client = $api_client;
         $this->post_generator = $post_generator;
         $this->settings_manager = $settings_manager;
         $this->idea_repository = $idea_repository;
+        $this->post_generation_process = $post_generation_process;
     }
 
     public function render_page() {
@@ -171,7 +175,7 @@ class IdeasListController {
 
     /**
      * Handles the admin-post action to initiate post generation.
-     * Processes the generation request directly for maximum reliability.
+     * Now uses background processing if available, with direct processing as fallback.
      */
     public function handle_initiate_generate_post() {
         if (!isset($_POST['lepostclient_initiate_generate_post_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['lepostclient_initiate_generate_post_nonce'])), 'lepostclient_initiate_generate_post_action')) {
@@ -210,56 +214,85 @@ class IdeasListController {
             exit;
         }
 
-        // Process post generation directly
-        try {
-            // Set maximum execution time to 10 minutes to allow for content generation
-            // Note: This may not work on all hosting environments due to server-level restrictions
-            @set_time_limit(600);
+        // Check if background processing is available
+        if ($this->post_generation_process instanceof Post_Generation_Process) {
+            // Use background processing
+            error_log("LePostClient: Queueing post generation for idea ID {$idea_id} in background process");
             
-            // Create post idea model
-            $post_idea_model = new \LePostClient\Model\PostIdea($idea_subject, $idea_description);
+            // Queue the job
+            $this->post_generation_process->push_to_queue([
+                'idea_id' => (int)$idea_id,
+                'subject' => $idea_subject,
+                'description' => $idea_description
+            ]);
             
-            // Generate and save the post
-            $result = $this->post_generator->generate_and_save_post($post_idea_model);
+            // Dispatch the background process
+            $this->post_generation_process->save()->dispatch();
             
-            if (is_wp_error($result)) {
+            add_settings_error(
+                'lepostclient_notices',
+                'generation_queued',
+                sprintf(
+                    __('Post generation for idea "%s" has been queued and will be processed in the background.', 'lepostclient'),
+                    esc_html($idea_subject)
+                ),
+                'updated'
+            );
+        } else {
+            // Fallback to direct processing
+            error_log("LePostClient: Background processor not available, using direct processing for idea ID {$idea_id}");
+            
+            // Process post generation directly
+            try {
+                // Set maximum execution time to 10 minutes to allow for content generation
+                // Note: This may not work on all hosting environments due to server-level restrictions
+                @set_time_limit(600);
+                
+                // Create post idea model
+                $post_idea_model = new \LePostClient\Model\PostIdea($idea_subject, $idea_description);
+                
+                // Generate and save the post
+                $result = $this->post_generator->generate_and_save_post($post_idea_model);
+                
+                if (is_wp_error($result)) {
+                    $this->idea_repository->update_idea_status((int)$idea_id, 'failed');
+                    add_settings_error(
+                        'lepostclient_notices',
+                        'generation_failed',
+                        sprintf(
+                            __('Post generation for idea "%s" failed: %s', 'lepostclient'),
+                            esc_html($idea_subject),
+                            esc_html($result->get_error_message())
+                        ),
+                        'error'
+                    );
+                } else {
+                    // Update idea status to completed with the generated post ID
+                    $this->idea_repository->update_idea_status((int)$idea_id, 'completed', $result);
+                    add_settings_error(
+                        'lepostclient_notices',
+                        'generation_completed',
+                        sprintf(
+                            __('Post generation for idea "%s" completed successfully. <a href="%s">View post</a>', 'lepostclient'),
+                            esc_html($idea_subject),
+                            esc_url(get_edit_post_link($result))
+                        ),
+                        'updated'
+                    );
+                }
+            } catch (\Throwable $e) {
+                error_log('LePostClient Error during post generation: ' . $e->getMessage());
                 $this->idea_repository->update_idea_status((int)$idea_id, 'failed');
                 add_settings_error(
                     'lepostclient_notices',
-                    'generation_failed',
+                    'generation_exception',
                     sprintf(
-                        __('Post generation for idea "%s" failed: %s', 'lepostclient'),
-                        esc_html($idea_subject),
-                        esc_html($result->get_error_message())
+                        __('An error occurred during post generation: %s', 'lepostclient'),
+                        esc_html($e->getMessage())
                     ),
                     'error'
                 );
-            } else {
-                // Update idea status to completed with the generated post ID
-                $this->idea_repository->update_idea_status((int)$idea_id, 'completed', $result);
-                add_settings_error(
-                    'lepostclient_notices',
-                    'generation_completed',
-                    sprintf(
-                        __('Post generation for idea "%s" completed successfully. <a href="%s">View post</a>', 'lepostclient'),
-                        esc_html($idea_subject),
-                        esc_url(get_edit_post_link($result))
-                    ),
-                    'updated'
-                );
             }
-        } catch (\Exception $e) {
-            $this->idea_repository->update_idea_status((int)$idea_id, 'failed');
-            error_log('LePostClient Error: ' . $e->getMessage());
-            add_settings_error(
-                'lepostclient_notices',
-                'generation_exception',
-                sprintf(
-                    __('An error occurred during post generation: %s', 'lepostclient'),
-                    esc_html($e->getMessage())
-                ),
-                'error'
-            );
         }
         
         $redirect_url = admin_url('admin.php?page=lepostclient_ideas_list');
@@ -634,35 +667,4 @@ class IdeasListController {
         wp_safe_redirect(admin_url('admin.php?page=lepostclient_ideas_list'));
         exit;
     }
-
-    // Placeholder for AJAX handler, as anticipated in Plugin.php (commented out section)
-    /*
-    public function handle_generate_post_ajax() {
-        check_ajax_referer('lepostclient_generate_post_nonce', 'nonce');
-
-        // Get idea_id from $_POST
-        $idea_id = isset($_POST['idea_id']) ? intval($_POST['idea_id']) : 0;
-
-        if (!$idea_id) {
-            wp_send_json_error(['message' => __('Invalid Idea ID.', 'lepostclient')]);
-            return;
-        }
-
-        // Fetch idea details (perhaps from API or a local cache/DB if you store them)
-        // $idea_data = $this->api_client->getPostIdeaDetails($idea_id);
-        // if (!$idea_data) {
-        //     wp_send_json_error(['message' => __('Could not fetch idea details.', 'lepostclient')]);
-        //     return;
-        // }
-
-        // $result = $this->post_generator->generatePostFromIdea($idea_data);
-
-        // if ($result && !is_wp_error($result)) {
-        //     wp_send_json_success(['message' => __('Post generated successfully!', 'lepostclient'), 'post_id' => $result]);
-        // } else {
-        //     wp_send_json_error(['message' => is_wp_error($result) ? $result->get_error_message() : __('Failed to generate post.', 'lepostclient')]);
-        // }
-        wp_die(); // this is required to terminate immediately and return a proper response
-    }
-    */
 } 

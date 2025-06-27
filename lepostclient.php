@@ -49,7 +49,7 @@ function lepostclient_exception_handler(\Throwable $exception)
     // Log the exception
     error_log('LePostClient Uncaught Exception: ' . $exception->getMessage());
     // Only show detailed error information in admin area when debugging is enabled
-    if (is_admin() && defined('WP_DEBUG') && WP_DEBUG) {
+    if (\is_admin() && defined('WP_DEBUG') && WP_DEBUG) {
         $error = '<div class="error notice">';
         $error .= '<p><strong>LePostClient Error:</strong> ' . esc_html($exception->getMessage()) . '</p>';
         // Add file and line information for debugging
@@ -63,7 +63,7 @@ function lepostclient_exception_handler(\Throwable $exception)
         });
     }
     // For AJAX requests, we can format an error response
-    if (wp_doing_ajax()) {
+    if (\wp_doing_ajax()) {
         wp_send_json_error([
             'message' => 'An unexpected error occurred.',
             'details' => WP_DEBUG ? $exception->getMessage() : null
@@ -96,15 +96,27 @@ register_deactivation_hook(__FILE__, 'deactivate_le_post_client');
 
 // Configure Plugin Update Checker
 add_action('init', function () {
-    if (class_exists('YahnisElsts\PluginUpdateChecker\v5\PucFactory')) {
-        $myUpdateChecker = PucFactory::buildUpdateChecker(
+    // Ensure the plugin update checker class exists
+    if (!class_exists('YahnisElsts\PluginUpdateChecker\v5\PucFactory')) {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Le Post Client: Plugin Update Checker library not found. Please run "composer install".');
+        }
+        return;
+    }
+    
+    try {
+        $myUpdateChecker = \YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
             'https://github.com/lmoffat25/LePostClient.git',
             __FILE__,
             'lepostclient'
         );
 
-        // Optionnel : Configurer pour utiliser les assets de release GitHub
+        // Optional: Configure to use GitHub release assets
         $myUpdateChecker->getVcsApi()->enableReleaseAssets();
+    } catch (\Throwable $e) {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Le Post Client: Error configuring update checker: ' . $e->getMessage());
+        }
     }
 });
 
@@ -130,7 +142,7 @@ function run_le_post_client_plugin()
         // Log the exception
         error_log('Le Post Client: Error during plugin initialization: ' . $e->getMessage());
         // Only display errors in admin area
-        if (is_admin() && current_user_can('manage_options')) {
+        if (\is_admin() && \current_user_can('manage_options')) {
             add_action('admin_notices', function () use ($e) {
                 echo '<div class="error notice"><p>';
                 echo '<strong>Le Post Client Error:</strong> ' . esc_html($e->getMessage());
@@ -149,4 +161,4 @@ add_action('plugins_loaded', 'run_le_post_client_plugin');
 function lepostclient_load_textdomain() {
     load_plugin_textdomain( 'lepostclient', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
 }
-add_action( 'plugins_loaded', 'lepostclient_load_textdomain' );
+add_action( 'init', 'lepostclient_load_textdomain' );
