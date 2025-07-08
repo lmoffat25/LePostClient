@@ -58,7 +58,13 @@ const initGenerateModal = ($) => {
 	});
 
 	// Handle Confirm & Generate button click
-	generateModalForm.on('submit', () => {
+	generateModalForm.on('submit', (e) => {
+		// Prevent double submission
+		if (confirmGenerateButton.prop('disabled')) {
+			e.preventDefault();
+			return false;
+		}
+		
 		confirmGenerateButton.prop('disabled', true).text('Generating...');
 		cancelGenerateModalButton.prop('disabled', true);
 		modalText.text('Generating post, please wait...');
@@ -66,9 +72,9 @@ const initGenerateModal = ($) => {
 		// Show progress bar
 		modalProgressContainer.show();
 		
-		// Start progress simulation
+		// Start progress tracking for this idea
 		const ideaId = modalIdeaIdInput.val();
-		startProgressSimulation(ideaId);
+		startProgressTracking(ideaId);
 		
 		// Allow default form submission to proceed
 	});
@@ -255,7 +261,7 @@ const initBulkActionsHandling = ($) => {
 				// Add progress bar to status cell if not already present
 				if (statusCell.find('.lepc-small-progress-container').length === 0) {
 					statusCell.html(`Generating <div class="lepc-small-progress-container"><div class="lepc-small-progress-bar" data-idea-id="${ideaId}"></div></div>`);
-					startProgressSimulation(ideaId);
+					startProgressTracking(ideaId);
 				}
 			});
 		}
@@ -286,67 +292,124 @@ const initBulkActionsHandling = ($) => {
  * @param {Object} $ jQuery object
  */
 const initProgressTracking = ($) => {
-	// Check for generating ideas on page load and start progress bars
+	// Check for generating ideas on page load and start progress tracking
 	$('.lepc-small-progress-bar').each(function() {
 		const ideaId = $(this).data('idea-id');
 		if (ideaId) {
-			startProgressSimulation(ideaId);
+			startProgressTracking(ideaId);
 		}
 	});
 }
 
-// Progress bar configuration
-const progressConfig = {
-	estimatedTime: 120000, // 120 seconds (adjust based on average generation time)
-	updateInterval: 500, // Update every 500ms
-	maxProgress: 95 // Maximum progress percentage before completion
-};
-
-// Store progress intervals by idea ID
-const progressIntervals = {};
+// Store active polling intervals by idea ID
+const activePollingIntervals = {};
 
 /**
- * Start simulating progress for an idea
+ * Start tracking progress for an idea using the task status API
  * @param {string} ideaId The ID of the idea being generated
  */
-const startProgressSimulation = (ideaId) => {
+const startProgressTracking = (ideaId) => {
 	const $ = jQuery;
 	
 	// Clear any existing interval for this idea
-	if (progressIntervals[ideaId]) {
-		clearInterval(progressIntervals[ideaId]);
+	if (activePollingIntervals[ideaId]) {
+		clearInterval(activePollingIntervals[ideaId]);
 	}
 	
-	const startTime = Date.now();
-	let currentProgress = 0;
-	
-	// Update both the modal progress bar and the table row progress bar
-	progressIntervals[ideaId] = setInterval(() => {
-		const elapsedTime = Date.now() - startTime;
-		const progressPercentage = Math.min(
-			Math.round((elapsedTime / progressConfig.estimatedTime) * 100),
-			progressConfig.maxProgress
-		);
+	// Function to update UI based on task status
+	const updateProgressUI = (status) => {
+		const progressPercentage = status.progress || 0;
+		const statusText = status.status || 'processing';
+		const stageMessage = status.stage_message || 'Processing content';
 		
-		if (progressPercentage > currentProgress) {
-			currentProgress = progressPercentage;
+		// Update modal progress bar if visible
+		const modalProgressContainer = $('#lepc-modal-progress-container');
+		if (modalProgressContainer.is(':visible')) {
+			$('#lepc-modal-progress-bar').css('width', progressPercentage + '%');
+			$('#lepc-modal-progress-text').text(progressPercentage + '% - ' + stageMessage);
+		}
+		
+		// Update table row progress bar and status
+		const progressBar = $(`.lepc-small-progress-bar[data-idea-id="${ideaId}"]`);
+		const statusCell = progressBar.closest('.status');
+		
+		progressBar.css('width', progressPercentage + '%');
+		
+		// If completed, update UI accordingly
+		if (statusText === 'completed') {
+			clearInterval(activePollingIntervals[ideaId]);
 			
-			// Update modal progress bar if visible
-			const modalProgressContainer = $('#lepc-modal-progress-container');
-			if (modalProgressContainer.is(':visible')) {
-				$('#lepc-modal-progress-bar').css('width', currentProgress + '%');
-				$('#lepc-modal-progress-text').text(currentProgress + '%');
+			// If we have a post ID, update the UI to show the view post link
+			if (status.generated_post_id) {
+				const row = progressBar.closest('tr');
+				const actionsCell = row.find('.actions');
+				
+				// Update status cell
+				statusCell.html('Completed');
+				
+				// Update actions cell with view post button
+				if (status.post_edit_url) {
+					actionsCell.html(`
+						<a href="${status.post_edit_url}" class="button button-secondary" target="_blank">View Gen. Post</a>
+						<button type="button" class="button button-secondary lepc-open-edit-modal-button" 
+							data-idea-id="${ideaId}" 
+							data-subject="${row.find('.subject').data('subject')}" 
+							data-description="${row.find('.subject').data('description')}" 
+							style="margin-left:5px;">Edit</button>
+						<button type="button" class="button button-link-delete lepc-open-delete-modal-button" 
+							data-idea-id="${ideaId}" 
+							data-subject="${row.find('.subject').data('subject')}" 
+							style="margin-left:5px; color: #d63638;">Delete</button>
+					`);
+				}
+				
+				// If modal is still open, close it and redirect to post edit page
+				const generateModal = $('#lepc-generate-confirm-modal');
+				if (generateModal.is(':visible')) {
+					generateModal.hide();
+					if (status.post_edit_url) {
+						window.location.href = status.post_edit_url;
+					} else {
+						// Reload the page to refresh the list
+						window.location.reload();
+					}
+				}
 			}
+		} else if (statusText === 'failed') {
+			// Handle failed status
+			clearInterval(activePollingIntervals[ideaId]);
+			statusCell.html('Failed');
 			
-			// Update table row progress bar
-			$(`.lepc-small-progress-bar[data-idea-id="${ideaId}"]`).css('width', currentProgress + '%');
-			
-			// If we've reached max progress, stop the interval
-			if (currentProgress >= progressConfig.maxProgress) {
-				clearInterval(progressIntervals[ideaId]);
+			// Show error message if available
+			if (status.error_message) {
+				alert('Post generation failed: ' + status.error_message);
 			}
 		}
-	}, progressConfig.updateInterval);
+	};
+	
+	// Start polling for status updates
+	activePollingIntervals[ideaId] = setInterval(() => {
+		// Make AJAX request to check status
+		$.ajax({
+			url: ajaxurl,
+			type: 'POST',
+			data: {
+				action: 'lepostclient_check_generation_status',
+				idea_id: ideaId,
+				nonce: lepostclient_data.status_nonce
+			},
+			success: function(response) {
+				if (response.success && response.data) {
+					updateProgressUI(response.data);
+				} else {
+					console.error('Error checking generation status:', response);
+				}
+			},
+			error: function(xhr, status, error) {
+				console.error('AJAX error:', error);
+			}
+		});
+	}, 3000); // Poll every 3 seconds as recommended
 };
 
 jQuery(document).ready(function($) {

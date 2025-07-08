@@ -77,6 +77,16 @@ class IdeaRepository {
     }
 
     /**
+     * Alias for get_idea for better readability and consistency.
+     *
+     * @param int $idea_id The ID of the idea to retrieve.
+     * @return object|null The idea object, or null if not found or on error.
+     */
+    public function get_idea_by_id(int $idea_id): ?object {
+        return $this->get_idea($idea_id);
+    }
+
+    /**
      * Retrieves ideas based on status and with pagination.
      *
      * @param string $status The status to filter by (e.g., 'pending', 'generated').
@@ -169,9 +179,10 @@ class IdeaRepository {
     public function update_idea_status(int $idea_id, string $new_status, ?int $generated_post_id = null): bool {
         $data_to_update = [
             'status' => $new_status,
+            'status_changed' => current_time('mysql'), // Add timestamp when status changed
             'last_modified_date' => current_time('mysql')
         ];
-        $formats = ['%s', '%s']; // status, last_modified_date
+        $formats = ['%s', '%s', '%s']; // status, status_changed, last_modified_date
 
         if ($generated_post_id !== null) {
             $data_to_update['generated_post_id'] = $generated_post_id;
@@ -186,6 +197,48 @@ class IdeaRepository {
             ['%d'] // WHERE format for id
         );
         return $result !== false;
+    }
+
+    /**
+     * Updates the task_id for a specific idea.
+     *
+     * @param int $idea_id The ID of the idea to update.
+     * @param string $task_id The task_id to set.
+     * @return bool True on success, false on failure.
+     */
+    public function update_idea_task_id(int $idea_id, string $task_id): bool {
+        $result = $this->db->update(
+            $this->table_name,
+            ['task_id' => $task_id],
+            ['id' => $idea_id],
+            ['%s'],
+            ['%d']
+        );
+
+        if ($result === false) {
+            error_log("LePostClient: Failed to update task_id for idea ID {$idea_id}");
+            return false;
+        }
+
+        error_log("LePostClient: Successfully updated task_id for idea ID {$idea_id}: {$task_id}");
+        return true;
+    }
+
+    /**
+     * Gets the task_id for a specific idea.
+     *
+     * @param int $idea_id The ID of the idea.
+     * @return string|null The task_id or null if not found.
+     */
+    public function get_idea_task_id(int $idea_id): ?string {
+        $task_id = $this->db->get_var(
+            $this->db->prepare(
+                "SELECT task_id FROM {$this->table_name} WHERE id = %d",
+                $idea_id
+            )
+        );
+
+        return $task_id ?: null;
     }
 
     /**

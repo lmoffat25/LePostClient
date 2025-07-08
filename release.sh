@@ -26,7 +26,7 @@ echo "Preparing release v$VERSION..."
 sed -i '' "s/Version:     [0-9]*\.[0-9]*\.[0-9]*/Version:     $VERSION/" lepostclient.php
 
 # Update version constant
-sed -i '' "s/define( 'LEPOCLIENT_VERSION', '[0-9]*\.[0-9]*\.[0-9]*' );/define( 'LEPOCLIENT_VERSION', '$VERSION' );/" lepostclient.php
+sed -i '' "s/define( 'LEPOSTCLIENT_VERSION', '[0-9]*\.[0-9]*\.[0-9]*' );/define( 'LEPOSTCLIENT_VERSION', '$VERSION' );/" lepostclient.php
 
 # Update CHANGELOG.md
 # Check if version already exists in CHANGELOG

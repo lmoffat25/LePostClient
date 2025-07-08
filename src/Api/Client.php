@@ -171,7 +171,7 @@ class Client {
      * @param string $subject_explanation The explanation or description of the subject.
      * @param string $company_info Company information to guide content generation.
      * @param string $writing_style The desired writing style, to be used as 'tone'.
-     * @return array|null An array containing 'title' and 'content', or null on failure.
+     * @return array|null An array containing task_id or content data, or null on failure.
      */
     public function generate_content(string $subject, string $subject_explanation, string $company_info, string $writing_style): ?array {
         try {
@@ -196,6 +196,16 @@ class Client {
             
             // Log the full response structure for debugging
             error_log("LePostClient API: Full generate-content response: " . wp_json_encode($response));
+            
+            // Check if this is an asynchronous task response (new API format)
+            if (isset($response['success']) && $response['success'] === true && 
+                isset($response['data']['task_id'])) {
+                error_log("LePostClient API: Found asynchronous task response with task_id: " . $response['data']['task_id']);
+                return [
+                    'is_async' => true,
+                    'task_id' => $response['data']['task_id']
+                ];
+            }
             
             // Handle the documented API response structure for multi-publication responses
             if (isset($response['success']) && $response['success'] === true && isset($response['data']['article']['content'])) {
@@ -248,12 +258,57 @@ class Client {
     }
 
     /**
-     * Generates AI-powered post ideas based on a theme and count.
+     * Check the status of a task.
      *
-     * @param string $theme The central theme for idea generation.
-     * @param int    $count The number of ideas to generate (typically 1-10).
-     * @return array|\WP_Error An associative array with 'ideas' and 'free_usage_info' on success, 
-     *                         or a WP_Error object on failure or if the API returns an error.
+     * @param string $task_id The task ID to check.
+     * @return array|null An array containing task status information, or null on failure.
+     */
+    public function check_task_status(string $task_id): ?array {
+        try {
+            error_log("LePostClient API: Checking status for task ID: {$task_id}");
+            $response = $this->perform_api_request("task-status/{$task_id}", 'GET');
+            
+            if ($response === null) {
+                throw ApiException::requestFailed('task-status', 'Failed to communicate with the API');
+            }
+            
+            error_log("LePostClient API: Task status response: " . wp_json_encode($response));
+            
+            if (isset($response['success']) && $response['success'] === true) {
+                // If data is empty array, provide a default structure
+                if (isset($response['data']) && empty($response['data'])) {
+                    return [
+                        'status' => 'pending',
+                        'progress' => 0,
+                        'message' => 'Task is in queue or processing'
+                    ];
+                }
+                
+                return $response['data'];
+            }
+            
+            if (isset($response['success']) && $response['success'] === false) {
+                $error_message = $response['message'] ?? 'Unknown API error';
+                throw ApiException::requestFailed('task-status', $error_message);
+            }
+            
+            error_log("LePostClient API Error: Task status response doesn't match expected format: " . wp_json_encode($response));
+            throw ApiException::invalidResponse('task-status');
+        } catch (ApiException $e) {
+            error_log('LePostClient API Error during task status check: ' . $e->getMessage());
+            return null;
+        } catch (\Exception $e) {
+            error_log('LePostClient Unexpected Error during task status check: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Generate AI ideas for blog posts.
+     *
+     * @param string $theme The theme to generate ideas for.
+     * @param int $count The number of ideas to generate.
+     * @return array|\WP_Error An array of ideas or WP_Error on failure.
      */
     public function generate_ai_ideas(string $theme, int $count): array|\WP_Error {
         try {

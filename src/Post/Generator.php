@@ -73,24 +73,39 @@ class Generator {
                 throw ContentGenerationException::failed('Failed to fetch content from the API');
             }
 
+            // Check if this is an asynchronous task response
+            if (isset($api_response['is_async']) && $api_response['is_async'] === true && isset($api_response['task_id'])) {
+                error_log('LePostClient: Received async task response with task_id: ' . $api_response['task_id']);
+                
+                // Poll for task completion
+                $content_data = $this->poll_task_until_complete($api_response['task_id']);
+                
+                if ($content_data === null) {
+                    throw ContentGenerationException::failed('Failed to retrieve content from async task');
+                }
+                
+                // Use the content data returned from the completed task
+                $api_response = $content_data;
+            }
+
             if (isset($api_response['success']) && $api_response['success'] === false) {
                 $error_message = $api_response['message'] ?? 'Unknown API error occurred';
                 error_log('LePostClient: API returned success=false: ' . $error_message);
                 throw ContentGenerationException::failed($error_message);
             }
 
-            // Ensure $api_response is an array before trying to access keys
-            if (!is_array($api_response)) {
-                // This can happen if perform_api_request returns null or a non-array error structure
-                // that wasn't caught by the previous checks (e.g. if success key is missing altogether)
-                error_log('LePostClient Post\Generator: API response was not in the expected format. Response: ' . print_r($api_response, true));
-                throw ContentGenerationException::invalidResponse('generate-content');
-            }
 
-            $post_title = !empty($api_response['title']) ? \sanitize_text_field($api_response['title']) : \sanitize_text_field($idea->subject);
-            $raw_html_content = $api_response['content'] ?? '';
-            // Get raw image URLs from API response
-            $raw_image_urls = $api_response['images'] ?? [];
+            // Check if the API response contains article data and extract it
+            if (isset($api_response['content']['article'])) {
+                $article_data = $api_response['content']['article'];
+                $post_title = !empty($article_data['title']) ? sanitize_text_field($article_data['title']) : sanitize_text_field($idea->subject);
+                $raw_html_content = $article_data['content'] ?? '';
+                $raw_image_urls = $article_data['images'] ?? [];
+            } else {
+                // If the article data is not found in the expected structure, throw an exception
+                error_log('LePostClient: API response missing expected article structure');
+                throw ContentGenerationException::invalidResponse('Missing article data structure in API response');
+            }
             
             // Log what we got from the API
             error_log('LePostClient: API returned - Title: ' . $post_title . ', Content length: ' . 
@@ -151,7 +166,7 @@ class Generator {
      * @param array $raw_image_urls Array of image URLs to process
      * @return array Array of permanent WordPress media URLs
      */
-    private function process_images(array $raw_image_urls): array {
+    public function process_images(array $raw_image_urls): array {
         $image_urls = [];
         
         foreach ($raw_image_urls as $image_url) {
@@ -309,5 +324,101 @@ class Generator {
         
         // Default to jpg if we can't determine
         return 'jpg';
+    }
+
+    /**
+     * Poll a task until it completes or times out.
+     *
+     * @param string $task_id The task ID to poll.
+     * @param int $max_attempts Maximum number of polling attempts.
+     * @param int $poll_interval Interval between polls in seconds.
+     * @return array|null The completed task data or null on failure.
+     */
+    public function poll_task_until_complete(string $task_id, int $max_attempts = 30, int $poll_interval = 5): ?array {
+        error_log("LePostClient: Starting to poll task status for task ID: {$task_id}");
+        
+        for ($attempt = 1; $attempt <= $max_attempts; $attempt++) {
+            // Check task status
+            $task_status = $this->api_client->check_task_status($task_id);
+            
+            if ($task_status === null) {
+                error_log("LePostClient: Failed to check task status on attempt {$attempt}");
+                // Wait before trying again
+                sleep($poll_interval);
+                continue;
+            }
+            
+            error_log("LePostClient: Task status check #{$attempt} - Status: " . ($task_status['status'] ?? 'unknown') . 
+                     ", Progress: " . ($task_status['progress'] ?? '0') . "%");
+            
+            // Check if task is completed
+            if (isset($task_status['status']) && $task_status['status'] === 'completed') {
+                error_log("LePostClient: Task completed successfully");
+                
+                // Check if the completed task contains content data
+                if (isset($task_status['content'])) {
+                    return [
+                        'title' => $task_status['title'] ?? '',
+                        'content' => $task_status['content'],
+                        'images' => $task_status['images'] ?? []
+                    ];
+                }
+                
+                // If the task is completed but doesn't contain content directly,
+                // it might be in a nested structure
+                if (isset($task_status['result'])) {
+                    if (is_array($task_status['result'])) {
+                        if (isset($task_status['result']['content'])) {
+                            return $task_status['result'];
+                        } elseif (isset($task_status['result']['article']) && isset($task_status['result']['article']['content'])) {
+                            return $task_status['result']['article'];
+                        }
+                    }
+                }
+                
+                error_log("LePostClient: Task completed but no content found in response: " . wp_json_encode($task_status));
+                return null;
+            }
+            
+            // Check if task failed
+            if (isset($task_status['status']) && $task_status['status'] === 'failed') {
+                $error_message = $task_status['error'] ?? 'Unknown error';
+                error_log("LePostClient: Task failed with error: {$error_message}");
+                return null;
+            }
+            
+            // Task is still in progress, wait before checking again
+            sleep($poll_interval);
+        }
+        
+        error_log("LePostClient: Exceeded maximum polling attempts ({$max_attempts}) for task ID: {$task_id}");
+        return null;
+    }
+
+    /**
+     * Get the settings manager instance.
+     *
+     * @return SettingsManager
+     */
+    public function get_settings_manager(): SettingsManager {
+        return $this->settings_manager;
+    }
+
+    /**
+     * Get the API client instance.
+     *
+     * @return ApiClient
+     */
+    public function get_api_client(): ApiClient {
+        return $this->api_client;
+    }
+
+    /**
+     * Get the post assembler instance.
+     *
+     * @return PostAssembler
+     */
+    public function get_post_assembler(): PostAssembler {
+        return $this->post_assembler;
     }
 } 

@@ -12,13 +12,18 @@
  */
 
 // Define plugin version constant
-if (!defined('LEPOCLIENT_VERSION')) {
-    define('LEPOCLIENT_VERSION', '1.0.3');
+if (!defined('LEPOSTCLIENT_VERSION')) {
+    define('LEPOSTCLIENT_VERSION', '1.0.3');
 }
 
 // Define API endpoint URL constant
 if (!defined('LEPOSTCLIENT_API_BASE_URL')) {
     define('LEPOSTCLIENT_API_BASE_URL', 'https://agence-web-prism.fr/wp-json/le-post/v1');
+}
+
+// Define plugin URL constant
+if (!defined('LEPOSTCLIENT_URL')) {
+    define('LEPOSTCLIENT_URL', plugin_dir_url(__FILE__));
 }
 
 // If this file is called directly, abort.

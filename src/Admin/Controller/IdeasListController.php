@@ -197,6 +197,47 @@ class IdeasListController {
             wp_safe_redirect($redirect_url);
             exit;
         }
+
+        // Check if idea is already being generated or has been generated
+        $idea = $this->idea_repository->get_idea_by_id((int)$idea_id);
+        if (!$idea) {
+            add_settings_error(
+                'lepostclient_notices',
+                'idea_not_found',
+                __('Idea not found.', 'lepostclient'),
+                'error'
+            );
+            $redirect_url = admin_url('admin.php?page=lepostclient_ideas_list');
+            wp_safe_redirect($redirect_url);
+            exit;
+        }
+
+        if ($idea->status === 'generating') {
+            add_settings_error(
+                'lepostclient_notices',
+                'already_generating',
+                sprintf(__('Post generation for idea "%s" is already in progress.', 'lepostclient'), esc_html($idea_subject)),
+                'warning'
+            );
+            $redirect_url = admin_url('admin.php?page=lepostclient_ideas_list');
+            wp_safe_redirect($redirect_url);
+            exit;
+        }
+
+        if ($idea->status === 'completed' && !empty($idea->generated_post_id)) {
+            add_settings_error(
+                'lepostclient_notices',
+                'already_generated',
+                sprintf(__('Post for idea "%s" has already been generated. <a href="%s">View post</a>', 'lepostclient'), 
+                    esc_html($idea_subject),
+                    esc_url(get_edit_post_link($idea->generated_post_id))
+                ),
+                'info'
+            );
+            $redirect_url = admin_url('admin.php?page=lepostclient_ideas_list');
+            wp_safe_redirect($redirect_url);
+            exit;
+        }
         
         // Update idea status to generating
         $updated_to_generating = $this->idea_repository->update_idea_status((int)$idea_id, 'generating');
@@ -216,6 +257,43 @@ class IdeasListController {
 
         // Check if background processing is available
         if ($this->post_generation_process instanceof Post_Generation_Process) {
+            // Check if this idea is already in the queue by querying the database directly
+            global $wpdb;
+            // Use the hardcoded identifier based on the Post_Generation_Process class properties
+            $queue_key_pattern = $wpdb->esc_like('lepostclient_post_generation_batch_') . '%';
+            $queued_items = $wpdb->get_results(
+                $wpdb->prepare(
+                    "SELECT option_value FROM {$wpdb->options} WHERE option_name LIKE %s",
+                    $queue_key_pattern
+                )
+            );
+            
+            $already_queued = false;
+            foreach ($queued_items as $item) {
+                $batch_data = maybe_unserialize($item->option_value);
+                if (is_array($batch_data)) {
+                    foreach ($batch_data as $queue_item) {
+                        if (isset($queue_item['idea_id']) && $queue_item['idea_id'] == (int)$idea_id) {
+                            $already_queued = true;
+                            break 2;
+                        }
+                    }
+                }
+            }
+            
+            if ($already_queued) {
+                error_log("LePostClient: Idea ID {$idea_id} is already queued for generation");
+                add_settings_error(
+                    'lepostclient_notices',
+                    'already_queued',
+                    sprintf(__('Post generation for idea "%s" is already queued for processing.', 'lepostclient'), esc_html($idea_subject)),
+                    'warning'
+                );
+                $redirect_url = admin_url('admin.php?page=lepostclient_ideas_list');
+                wp_safe_redirect($redirect_url);
+                exit;
+            }
+            
             // Use background processing
             error_log("LePostClient: Queueing post generation for idea ID {$idea_id} in background process");
             
@@ -666,5 +744,141 @@ class IdeasListController {
 
         wp_safe_redirect(admin_url('admin.php?page=lepostclient_ideas_list'));
         exit;
+    }
+
+    /**
+     * Handles AJAX requests to check the status of post generation tasks
+     */
+    public function handle_check_generation_status() {
+        // Verify nonce for security
+        check_ajax_referer('lepostclient_status_check_nonce', 'nonce');
+        
+        // Get the idea ID from the request
+        $idea_id = isset($_POST['idea_id']) ? intval($_POST['idea_id']) : 0;
+        
+        if (empty($idea_id)) {
+            wp_send_json_error(['message' => 'Invalid idea ID']);
+            return;
+        }
+        
+        // Get idea status from the database
+        $idea = $this->idea_repository->get_idea_by_id($idea_id);
+        
+        if (!$idea) {
+            wp_send_json_error(['message' => 'Idea not found']);
+            return;
+        }
+        
+        // If we have a task_id and status is generating, poll the API for real progress
+        if ($idea->status === 'generating') {
+            $task_id = $this->idea_repository->get_idea_task_id($idea_id);
+            
+            if ($task_id) {
+                try {
+                    // Poll the API for real task status
+                    $api_response = $this->api_client->check_task_status($task_id);
+                    
+                    if ($api_response && isset($api_response['status'])) {
+                        $status = $api_response['status'];
+                        $progress = $api_response['progress'] ?? 0;
+                        $message = $api_response['status_message'] ?? $api_response['message'] ?? '';
+                        
+                        error_log("LePostClient: API task status for idea ID {$idea_id}: status={$status}, progress={$progress}%");
+                        
+                        // If the task is completed, check if we have content data
+                        if ($status === 'completed') {
+                            // Check if the completed task contains content data
+                            if (isset($api_response['result']['content']['article'])) {
+                                // Task is completed with content, check if post was created
+                                $idea = $this->idea_repository->get_idea_by_id($idea_id);
+                                $response_data = [
+                                    'status' => 'completed',
+                                    'progress' => 100,
+                                    'message' => 'Post generation completed successfully!'
+                                ];
+                                
+                                // Add post information if available
+                                if ($idea && $idea->generated_post_id) {
+                                    $response_data['generated_post_id'] = $idea->generated_post_id;
+                                    $response_data['post_edit_url'] = get_edit_post_link($idea->generated_post_id, 'raw');
+                                }
+                                
+                                wp_send_json_success($response_data);
+                                return;
+                            } else {
+                                // Task completed but no content found
+                                wp_send_json_success([
+                                    'status' => 'failed',
+                                    'progress' => 0,
+                                    'message' => 'Task completed but no content was generated'
+                                ]);
+                                return;
+                            }
+                        }
+                        
+                        // If task failed
+                        if ($status === 'failed') {
+                            $error_message = $api_response['error'] ?? 'Task failed';
+                            wp_send_json_success([
+                                'status' => 'failed',
+                                'progress' => 0,
+                                'message' => $error_message
+                            ]);
+                            return;
+                        }
+                        
+                        // Return the real progress from the API
+                        wp_send_json_success([
+                            'status' => $status,
+                            'progress' => $progress,
+                            'message' => $message
+                        ]);
+                        return;
+                    }
+                } catch (\Exception $e) {
+                    error_log("LePostClient: Error polling API task status: " . $e->getMessage());
+                    // Fall back to local status check
+                }
+            }
+        }
+        
+        // Fallback to local status check (existing logic)
+        $current_status = $idea->status;
+        $progress = 0;
+        $message = '';
+        
+        switch ($current_status) {
+            case 'pending':
+                $progress = 0;
+                $message = __('Waiting to start...', 'lepostclient');
+                break;
+            case 'generating':
+                // Calculate progress based on time elapsed since status change
+                $status_changed = $idea->status_changed ? strtotime($idea->status_changed) : time();
+                $elapsed = time() - $status_changed;
+                $progress = min(90, max(10, intval($elapsed / 30))); // 10-90% over 4 minutes
+                $message = __('Generating content...', 'lepostclient');
+                break;
+            case 'completed':
+                $progress = 100;
+                $message = __('Post generated successfully!', 'lepostclient');
+                break;
+            case 'failed':
+                $progress = 0;
+                $message = __('Generation failed. Please try again.', 'lepostclient');
+                break;
+            default:
+                $progress = 0;
+                $message = __('Unknown status', 'lepostclient');
+        }
+        
+        wp_send_json_success([
+            'status' => $current_status,
+            'progress' => $progress,
+            'message' => $message,
+            // Add post information for completed ideas
+            'generated_post_id' => $idea->generated_post_id ?? null,
+            'post_edit_url' => ($idea->generated_post_id) ? get_edit_post_link($idea->generated_post_id, 'raw') : null
+        ]);
     }
 } 

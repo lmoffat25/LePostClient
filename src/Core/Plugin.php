@@ -105,6 +105,9 @@ class Plugin {
         // Register the admin-post action for bulk actions
         add_action('admin_post_lepostclient_bulk_actions', [$this->ideas_list_controller, 'handle_bulk_actions']);
 
+        // Register AJAX endpoint for checking generation status
+        add_action('wp_ajax_lepostclient_check_generation_status', [$this->ideas_list_controller, 'handle_check_generation_status']);
+
         // Add hook to check if API key is set and show setup screen if not
         add_action('admin_init', [$this, 'check_api_key']);
     }
@@ -289,22 +292,38 @@ class Plugin {
         }
     }
 
-    public function enqueue_admin_assets($hook_suffix) {
-        $main_menu_slug = 'lepostclient_dashboard'; 
-        $plugin_pages_hooks = [
-            'toplevel_page_' . $main_menu_slug,
-            $main_menu_slug . '_page_lepostclient_ideas_list',
-            $main_menu_slug . '_page_lepostclient_settings' 
-        ];
-        
-        // Always load styles if API key is not configured, since the setup screen can appear on any admin page
-        $is_api_key_configured = $this->settings_manager->is_configured();
-        
-        if (strpos($hook_suffix, 'lepostclient') !== false || !$is_api_key_configured) {
-            $version = defined('LEPOCLIENT_VERSION') ? LEPOCLIENT_VERSION : '1.0.0';
-            wp_enqueue_style('lepostclient-admin-style', plugin_dir_url( dirname( __FILE__, 2 ) ) . 'assets/css/admin-style.css', [], $version );
-            wp_enqueue_script('lepostclient-admin-script', plugin_dir_url( dirname( __FILE__, 2 ) ) . 'assets/js/admin-script.js', ['jquery'], $version, true );
+    public function enqueue_admin_assets($hook) {
+        // Only enqueue on our plugin's pages
+        if (strpos($hook, 'lepostclient') === false) {
+            return;
         }
+        
+        // Enqueue CSS
+        wp_enqueue_style(
+            'lepostclient-admin-style',
+            LEPOSTCLIENT_URL . 'assets/css/admin-style.css',
+            [],
+            LEPOSTCLIENT_VERSION
+        );
+        
+        // Enqueue JS
+        wp_enqueue_script(
+            'lepostclient-admin-script',
+            LEPOSTCLIENT_URL . 'assets/js/admin-script.js',
+            ['jquery'],
+            LEPOSTCLIENT_VERSION,
+            true
+        );
+        
+        // Pass data to the script
+        wp_localize_script(
+            'lepostclient-admin-script',
+            'lepostclient_data',
+            [
+                'ajaxurl' => admin_url('admin-ajax.php'),
+                'status_nonce' => wp_create_nonce('lepostclient_status_check_nonce'),
+            ]
+        );
     }
 
     /**
