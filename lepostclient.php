@@ -3,7 +3,7 @@
  * Plugin Name: Le Post Client
  * Plugin URI:  https://leonmoffat.com/lepostclient
  * Description: A client plugin to generate posts from an API.
- * Version:     1.0.3
+ * Version:     1.0.4
  * Author:      Leon Moffat
  * Author URI:  https://leonmoffat.com
  * License:     GPLv2 or later
@@ -13,7 +13,7 @@
 
 // Define plugin version constant
 if (!defined('LEPOSTCLIENT_VERSION')) {
-    define('LEPOSTCLIENT_VERSION', '1.0.3');
+    define('LEPOSTCLIENT_VERSION', '1.0.4');
 }
 
 // Define API endpoint URL constant
