@@ -59,6 +59,13 @@
         <div class="postbox" style="flex: 1;">
             <h2 class="hndle"  style="margin-left: 11px;"><span><?php esc_html_e( 'Import Ideas from CSV', 'lepostclient' ); ?></span></h2>
             <div class="inside">
+                <div style="background-color: #f0f6fc; border-left: 4px solid #007cba; padding: 12px; margin-bottom: 15px;">
+                    <p style="margin: 0 0 8px 0; font-size: 13px;">
+                        • <?php esc_html_e( 'First column: Subject (required)', 'lepostclient' ); ?><br>
+                        • <?php esc_html_e( 'Second column: Description (optional)', 'lepostclient' ); ?><br>
+                    </p>
+                </div>
+                
                 <form method="POST" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data" id="lepc-csv-import-form">
                     <input type="hidden" name="action" value="lepostclient_import_csv">
                     <?php wp_nonce_field( 'lepostclient_import_csv_action', 'lepostclient_import_csv_nonce_field' ); ?>
