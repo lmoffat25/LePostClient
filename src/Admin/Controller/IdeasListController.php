@@ -75,6 +75,9 @@ class IdeasListController {
         }
     }
 
+
+
+
     /**
      * Handles the admin-post action to add a new idea manually.
      */
@@ -125,6 +128,9 @@ class IdeasListController {
         exit;
     }
 
+
+
+
     /**
      * Handles the admin-post action to update an existing idea.
      */
@@ -173,6 +179,8 @@ class IdeasListController {
         exit;
     }
 
+
+    
     /**
      * Handles the admin-post action to initiate post generation.
      * Now uses background processing if available, with direct processing as fallback.
@@ -471,13 +479,22 @@ class IdeasListController {
                 $free_usage_info = $api_response['free_usage_info'] ?? null;
                 $saved_count = 0;
 
-                foreach ($ideas_from_api as $idea_subject_string) {
-                    // The new API returns an array of idea strings.
-                    if (is_string($idea_subject_string) && !empty($idea_subject_string)) {
+                foreach ($ideas_from_api as $idea_data) {
+                    // Handle both string format and object format
+                    if (is_string($idea_data) && !empty($idea_data)) {
+                        // Simple string format
                         $this->idea_repository->add_idea([
-                            'subject' => $idea_subject_string,
-                            'description' => '', // No description from this endpoint
-                            'api_theme_source' => $ai_subject, // Store the original theme used for generation
+                            'subject' => $idea_data,
+                            'description' => '',
+                            'api_theme_source' => $ai_subject,
+                        ]);
+                        $saved_count++;
+                    } elseif (is_array($idea_data) && isset($idea_data['title']) && !empty($idea_data['title'])) {
+                        // Object format with title and explanation
+                        $this->idea_repository->add_idea([
+                            'subject' => $idea_data['title'],
+                            'description' => $idea_data['explanation'] ?? '',
+                            'api_theme_source' => $ai_subject,
                         ]);
                         $saved_count++;
                     }
@@ -514,6 +531,8 @@ class IdeasListController {
                 );
 
             } else {
+                // Add debugging to see what we're actually getting
+                error_log("LePostClient: Unexpected AI ideas response structure: " . wp_json_encode($api_response));
                 add_settings_error(
                     'lepostclient_notices',
                     'ai_ideas_api_unexpected_response',
