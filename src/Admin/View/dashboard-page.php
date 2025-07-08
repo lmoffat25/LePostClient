@@ -32,30 +32,14 @@
                         }
                         ?>
                     </p>
+                    <!--
                     <a href="https://app.le-post.com/shop" class="button button-primary" target="_blank" style="margin-top:15px;"><?php esc_html_e( 'Buy More Credits', 'lepostclient' ); ?></a>
+                    -->
                 <?php endif; ?>
             </div>
         </div>
 
-        <!-- Column 2: Placeholder -->
-        <div class="postbox">
-            <h2 class="hndle"><span><span class="dashicons dashicons-chart-line" style="margin-right: 8px;"></span><?php esc_html_e( 'Usage Statistics', 'lepostclient' ); ?></span></h2>
-            <div class="inside">
-                <p><?php esc_html_e( 'Usage charts and statistics will be displayed here in a future update.', 'lepostclient' ); ?></p>
-                
-            </div>
-        </div>
-
-        <!-- Column 3: Placeholder -->
-        <div class="postbox">
-            <h2 class="hndle"><span><span class="dashicons dashicons-admin-links" style="margin-right: 8px;"></span><?php esc_html_e( 'Quick Links', 'lepostclient' ); ?></span></h2>
-            <div class="inside">
-                <ul>
-                    <li><a href="<?php echo esc_url(admin_url('admin.php?page=lepostclient_ideas_list')); ?>"><?php esc_html_e('Go to Ideas List', 'lepostclient'); ?></a></li>
-                    <li><a href="<?php echo esc_url(admin_url('admin.php?page=lepostclient_settings')); ?>"><?php esc_html_e('Configure Settings', 'lepostclient'); ?></a></li>
-                </ul>
-            </div>
-        </div>
+        
     </div>
 </div>
 
