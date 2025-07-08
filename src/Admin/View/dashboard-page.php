@@ -42,29 +42,3 @@
         
     </div>
 </div>
-
-<style>
-    .lepc-dashboard-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 20px;
-        margin-top: 20px;
-    }
-    .lepc-credits-display {
-        text-align: center;
-        padding: 20px;
-        border: 1px solid #ccd0d4;
-        border-radius: 4px;
-        background: #f6f7f7;
-    }
-    .lepc-credits-number {
-        display: block;
-        font-size: 3em;
-        font-weight: bold;
-        line-height: 1.2;
-    }
-    .lepc-credits-label {
-        font-size: 1.2em;
-        color: #50575e;
-    }
-</style> 

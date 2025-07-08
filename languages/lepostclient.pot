@@ -2,54 +2,493 @@
 # This file is distributed under the same license as the Le Post Client plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: Le Post Client 1.0.3\n"
+"Project-Id-Version: Le Post Client 1.0.4\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/lepostclient\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2024-06-15T12:00:00+00:00\n"
+"POT-Creation-Date: 2024-12-19T12:00:00+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.8.1\n"
 "X-Domain: lepostclient\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-#: src/Admin/View/api-key-setup-page.php:3
-msgid "Welcome to Le Post Client"
+#: src/Admin/AdminMenu.php:29
+msgid "Le Post Client Dashboard"
 msgstr ""
 
-#: src/Admin/View/api-key-setup-page.php:8
-msgid "To get started, please enter your API key below. This key is required to connect to the Le Post service and generate content."
+#: src/Admin/AdminMenu.php:30
+msgid "Le Post Client"
 msgstr ""
 
-#: src/Admin/View/api-key-setup-page.php:25
-msgid "API Key"
+#: src/Admin/AdminMenu.php:41
+msgid "Ideas List"
 msgstr ""
 
-#: src/Admin/View/api-key-setup-page.php:31
-msgid "Don't have an API key? Get one from %s"
+#: src/Admin/AdminMenu.php:51
+msgid "Settings"
 msgstr ""
 
-#: src/Admin/View/api-key-setup-page.php:32
-msgid "your account page"
-msgstr ""
-
-#: src/Admin/View/api-key-setup-page.php:39
-msgid "Save API Key"
-msgstr ""
-
-#: src/Admin/Controller/ApiKeySetupController.php:75
-msgid "API key cannot be empty."
-msgstr ""
-
-#: src/Admin/Controller/ApiKeySetupController.php:87
-msgid "API key saved successfully."
-msgstr ""
-
-#: src/Admin/Controller/ApiKeySetupController.php:45
+#: src/Admin/Controller/ApiKeySetupController.php:54
 msgid "You do not have sufficient permissions to access this page."
 msgstr ""
 
-#: src/Admin/Controller/ApiKeySetupController.php:50
+#: src/Admin/Controller/ApiKeySetupController.php:59
 msgid "Nonce verification failed."
+msgstr ""
+
+#: src/Admin/Controller/ApiKeySetupController.php:72
+msgid "API key cannot be empty."
+msgstr ""
+
+#: src/Admin/Controller/ApiKeySetupController.php:85
+msgid "API key saved successfully."
+msgstr ""
+
+#: src/Admin/Controller/DashboardController.php:29
+msgid "An unknown error occurred while fetching account information."
+msgstr ""
+
+#: src/Admin/Controller/DashboardController.php:32
+msgid "API Key is not set. Please configure it in the settings page."
+msgstr ""
+
+#: src/Admin/Controller/IdeasListController.php:503
+msgid "Successfully imported %d idea from CSV."
+msgid_plural "Successfully imported %d ideas from CSV."
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/Admin/Controller/IdeasListController.php:640
+msgid "%d rows could not be imported."
+msgstr ""
+
+#: src/Admin/Controller/IdeasListController.php:642
+msgid "CSV import completed, but %d rows could not be imported. Please check the file format and content."
+msgstr ""
+
+#: src/Admin/Controller/IdeasListController.php:644
+msgid "The CSV file was empty or contained no valid data to import."
+msgstr ""
+
+#: src/Admin/Controller/IdeasListController.php:647
+msgid "Could not open the uploaded CSV file for processing."
+msgstr ""
+
+#: src/Admin/Controller/IdeasListController.php:660
+msgid "Security check failed for bulk actions. Please try again."
+msgstr ""
+
+#: src/Admin/Controller/IdeasListController.php:663
+msgid "You do not have sufficient permissions to perform this action."
+msgstr ""
+
+#: src/Admin/Controller/SettingsController.php:31
+msgid "You do not have sufficient permissions to access this page."
+msgstr ""
+
+#: src/Admin/Controller/SettingsController.php:36
+msgid "Nonce verification failed."
+msgstr ""
+
+#: src/Admin/Controller/SettingsController.php:65
+msgid "Settings saved successfully."
+msgstr ""
+
+#: src/Admin/View/api-key-setup-page.php:2
+msgid "Welcome to Le Post Client"
+msgstr ""
+
+#: src/Admin/View/api-key-setup-page.php:7
+msgid "To get started, please enter your API key below. This key is required to connect to the Le Post service and generate content."
+msgstr ""
+
+#: src/Admin/View/api-key-setup-page.php:24
+msgid "API Key"
+msgstr ""
+
+#: src/Admin/View/api-key-setup-page.php:30
+msgid "Don't have an API key? Get one from %s"
+msgstr ""
+
+#: src/Admin/View/api-key-setup-page.php:31
+msgid "your account page"
+msgstr ""
+
+#: src/Admin/View/api-key-setup-page.php:38
+msgid "Save API Key"
+msgstr ""
+
+#: src/Admin/View/dashboard-page.php:1
+msgid "Le Post Client Dashboard"
+msgstr ""
+
+#: src/Admin/View/dashboard-page.php:2
+msgid "Welcome to your dashboard. Here you can find a summary of your account and quick actions."
+msgstr ""
+
+#: src/Admin/View/dashboard-page.php:8
+msgid "Your Credits"
+msgstr ""
+
+#: src/Admin/View/dashboard-page.php:15
+msgid "Go to Settings"
+msgstr ""
+
+#: src/Admin/View/dashboard-page.php:22
+msgid "Credits Remaining"
+msgstr ""
+
+#: src/Admin/View/dashboard-page.php:28
+msgid "You have a monthly limit of %s credits."
+msgstr ""
+
+#: src/Admin/View/dashboard-page.php:35
+msgid "Buy More Credits"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:1
+msgid "Post Ideas List"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:2
+msgid "Add New Idea (Example Button)"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:9
+msgid "Add New Idea Manually"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:16
+msgid "Post Subject"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:20
+msgid "Description"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:24
+msgid "Save Idea"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:32
+msgid "Generate Ideas with AI"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:38
+msgid "Base Subject / Keyword"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:42
+msgid "Number of Ideas to Generate"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:51
+msgid "Generate Ideas"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:59
+msgid "Import Ideas from CSV"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:63
+msgid "First column: Subject (required)"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:64
+msgid "Second column: Description (optional)"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:72
+msgid "Drag & Drop CSV file here or click to select."
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:77
+msgid "Import CSV"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:93
+msgid "Select bulk action"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:95
+msgid "Bulk actions"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:96
+msgid "Generate Selected"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:97
+msgid "Edit Selected"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:98
+msgid "Delete Selected"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:100
+msgid "Apply"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:103
+msgid "%s items"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:109
+msgid "&laquo;"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:110
+msgid "&raquo;"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:123
+msgid "Current Page"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:123
+msgid "of"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:136
+msgid "Select All"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:140
+msgid "Subject"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:143
+msgid "Description"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:146
+msgid "Status"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:149
+msgid "Creation Date"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:152
+msgid "Actions"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:177
+msgid "Select %s"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:189
+msgid "Edit \"%s\""
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:190
+msgid "Edit"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:194
+msgid "Generate"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:196
+msgid "View Post"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:203
+msgid "Delete \"%s\""
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:204
+msgid "Delete"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:226
+msgid "Generate"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:228
+msgid "View Gen. Post"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:237
+msgid "Edit"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:243
+msgid "Delete"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:250
+msgid "No post ideas found."
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:259
+msgid "Subject"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:262
+msgid "Description"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:265
+msgid "Status"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:268
+msgid "Creation Date"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:271
+msgid "Actions"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:279
+msgid "Select bulk action"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:281
+msgid "Bulk actions"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:282
+msgid "Generate Selected"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:283
+msgid "Edit Selected"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:284
+msgid "Delete Selected"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:286
+msgid "Apply"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:289
+msgid "%s items"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:299
+msgid "Current Page"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:299
+msgid "of"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:312
+msgid "Confirm Post Generation"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:323
+msgid "Cancel"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:330
+msgid "Confirm & Generate"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:339
+msgid "Edit Post Idea"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:346
+msgid "Post Subject"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:350
+msgid "Description"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:354
+msgid "Cancel"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:355
+msgid "Save Changes"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:364
+msgid "Confirm Deletion"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:367
+msgid "Cancel"
+msgstr ""
+
+#: src/Admin/View/ideas-list-page.php:372
+msgid "Confirm & Delete"
+msgstr ""
+
+#: src/Admin/View/settings-page.php:1
+msgid "Le Post Client Settings"
+msgstr ""
+
+#: src/Admin/View/settings-page.php:20
+msgid "API Key"
+msgstr ""
+
+#: src/Admin/View/settings-page.php:28
+msgid "Enter your API key to connect to Le Post Client service."
+msgstr ""
+
+#: src/Admin/View/settings-page.php:34
+msgid "Company Information"
+msgstr ""
+
+#: src/Admin/View/settings-page.php:42
+msgid "Provide general information about the company. This will be used to guide AI content generation."
+msgstr ""
+
+#: src/Admin/View/settings-page.php:48
+msgid "Writing Style"
+msgstr ""
+
+#: src/Admin/View/settings-page.php:56
+msgid "Describe the desired writing style (e.g., formal, casual, witty, technical). This helps tailor the AI output."
+msgstr ""
+
+#: src/Admin/View/settings-page.php:63
+msgid "Save Settings"
+msgstr ""
+
+#: src/Api/Client.php:315
+msgid "Theme cannot be empty for AI idea generation."
+msgstr ""
+
+#: src/Api/Client.php:318
+msgid "Number of ideas must be positive."
+msgstr ""
+
+#: src/Api/Client.php:341
+msgid "An unknown error occurred while generating AI ideas."
+msgstr ""
+
+#: src/Api/Client.php:361
+msgid "An unexpected error occurred while generating ideas."
+msgstr ""
+
+#: src/Settings/Manager.php:185
+msgid "Your LePost API key for authentication"
+msgstr ""
+
+#: src/Settings/Manager.php:195
+msgid "Timeout in seconds for API requests (between 30-600 seconds)"
+msgstr ""
+
+#: src/Settings/Manager.php:205
+msgid "Information about your company to use in generated content"
+msgstr ""
+
+#: src/Settings/Manager.php:215
+msgid "Preferred writing style for generated content"
+msgstr ""
+
+#: src/Settings/Manager.php:245
+msgid "API key cannot be empty"
 msgstr "" 
